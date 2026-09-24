@@ -3,12 +3,31 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.leostartup.loopdots'
     compileSdk 35
+
+    signingConfigs {
+        persistent {
+            def ks = System.getenv('LOOP_DOTS_KEYSTORE')
+            if (ks != null && file(ks).exists()) {
+                storeFile file(ks)
+                storePassword System.getenv('LOOP_DOTS_STORE_PASSWORD')
+                keyAlias System.getenv('LOOP_DOTS_KEY_ALIAS')
+                keyPassword System.getenv('LOOP_DOTS_KEY_PASSWORD')
+            }
+        }
+    }
     defaultConfig {
-        // Keep the installed app ID. Debug APK upgrades require the same signing key.
         applicationId 'com.leostartup.loopdots.v2'
         minSdk 26
         targetSdk 35
         versionCode 9
         versionName '2.0'
+    }
+    buildTypes {
+        release {
+            if (System.getenv('LOOP_DOTS_KEYSTORE') != null &&
+                    file(System.getenv('LOOP_DOTS_KEYSTORE')).exists()) {
+                signingConfig signingConfigs.persistent
+            }
+        }
     }
 }
