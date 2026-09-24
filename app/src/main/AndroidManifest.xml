@@ -6,27 +6,23 @@
         android:icon="@drawable/ic_habit"
         android:allowBackup="true"
         android:supportsRtl="true">
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-
-        <receiver
-            android:name=".LoopDotsWidgetProvider"
-            android:exported="true">
+        <activity android:name=".WidgetConfigActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
+            </intent-filter>
+        </activity>
+        <receiver android:name=".LoopDotsWidgetProvider" android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
                 <action android:name="com.leostartup.loopdots.TOGGLE_DAY"/>
-                <action android:name="com.leostartup.loopdots.RESET_MONTH"/>
             </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info"/>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info"/>
         </receiver>
     </application>
 </manifest>
