@@ -82,8 +82,8 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
                     ? R.drawable.dot_filled
                     : R.drawable.dot_empty;
 
-            // Keep the visual dot small while giving every day a generous 44dp touch target.
-            dot.setInt(R.id.dot_visual, "setBackgroundResource", background);
+            // ImageView resource updates are supported by RemoteViews; preserve the 44dp touch target.
+            dot.setImageViewResource(R.id.dot_visual, background);
             dot.setContentDescription(R.id.dot_touch, "Dia " + day);
 
             Intent toggle = new Intent(context, LoopDotsWidgetProvider.class)
