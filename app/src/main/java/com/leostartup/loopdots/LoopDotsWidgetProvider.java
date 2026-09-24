@@ -11,7 +11,6 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.TypedValue;
 import android.widget.RemoteViews;
 import java.text.DateFormatSymbols;
 import java.util.ArrayList;
@@ -113,7 +112,7 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         int height = Math.max(90, minHeight);
         int cell = Math.max(17, Math.min(54, (width - 12) / 7));
         // Fit a header, month navigation, one row per habit and its 5 calendar rows.
-        int rowHeight = Math.max(13, Math.min(cell, (height - 51) / Math.max(1, habits.size() * 5)));
+        int rowHeight = Math.max(17, Math.min(cell, (height - 51) / Math.max(1, habits.size() * 5)));
         int diameter = Math.max(9, Math.min(cell - 5, rowHeight - 3));
         float density = context.getResources().getDisplayMetrics().density;
         int dotPixel = Math.max(24, Math.round(diameter * density));
@@ -147,8 +146,6 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
                     RemoteViews dot = new RemoteViews(context.getPackageName(), R.layout.dot_item);
                     dot.setInt(R.id.dot_touch, "setMinimumHeight", rowHeight);
                     dot.setInt(R.id.dot_touch, "setMinimumWidth", cell);
-                    dot.setInt(R.id.dot_visual, "setMaxHeight", diameter);
-                    dot.setInt(R.id.dot_visual, "setMaxWidth", diameter);
                     if (day <= monthDays) {
                         Calendar date = (Calendar) month.clone();
                         date.set(Calendar.DAY_OF_MONTH, day);
