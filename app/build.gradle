@@ -4,11 +4,11 @@ android {
     namespace 'com.leostartup.loopdots'
     compileSdk 35
     defaultConfig {
-        // Preserve the current app ID; signature must match when installing updates.
+        // Keep the installed app ID. Debug APK upgrades require the same signing key.
         applicationId 'com.leostartup.loopdots.v2'
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName '1.5'
+        versionCode 7
+        versionName '1.6'
     }
 }
