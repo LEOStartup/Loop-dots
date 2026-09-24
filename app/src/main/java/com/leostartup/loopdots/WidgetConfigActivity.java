@@ -28,15 +28,20 @@ public class WidgetConfigActivity extends Activity {
     private static final String MONTH_PREFIX = "month_";
     private static final String GLASS_PREFIX = "glass_";
     private static final String ALPHA_PREFIX = "alpha_";
+    private static final String TONE_PREFIX = "tone_";
     public static boolean glass(Context context, int id) {
         return context.getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(GLASS_PREFIX + id, false);
     }
     public static int opacity(Context context, int id) {
         return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(ALPHA_PREFIX + id, 60);
     }
-    public static void saveAppearance(Context context, int id, boolean glass, int opacity) {
+    public static int tone(Context context, int id) {
+        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(TONE_PREFIX + id, 2);
+    }
+    public static void saveAppearance(Context context, int id, boolean glass, int opacity, int tone) {
         context.getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-            .putBoolean(GLASS_PREFIX + id, glass).putInt(ALPHA_PREFIX + id, opacity).apply();
+            .putBoolean(GLASS_PREFIX + id, glass).putInt(ALPHA_PREFIX + id, opacity)
+            .putInt(TONE_PREFIX + id, tone).apply();
     }
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
@@ -86,7 +91,8 @@ public class WidgetConfigActivity extends Activity {
     public static void clear(Context context, int widgetId) {
         context.getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(PREFIX + widgetId)
                 .remove(MULTI_PREFIX + widgetId).remove(MONTH_PREFIX + widgetId)
-                .remove(GLASS_PREFIX + widgetId).remove(ALPHA_PREFIX + widgetId).apply();
+                .remove(GLASS_PREFIX + widgetId).remove(ALPHA_PREFIX + widgetId)
+                .remove(TONE_PREFIX + widgetId).apply();
     }
 
     private int dp(int n) { return (int) (getResources().getDisplayMetrics().density * n + .5f); }
@@ -159,6 +165,25 @@ public class WidgetConfigActivity extends Activity {
         note.setTextColor(0xFFAAAAAA);
         note.setTextSize(12);
         root.addView(note);
+        TextView toneTitle = new TextView(this);
+        toneTitle.setText("Cor de fundo");
+        toneTitle.setTextColor(Color.WHITE);
+        toneTitle.setPadding(0, dp(12), 0, 0);
+        root.addView(toneTitle);
+        RadioGroup tones = new RadioGroup(this);
+        tones.setOrientation(RadioGroup.HORIZONTAL);
+        String[] toneLabels = {"Auto", "Claro", "Escuro"};
+        RadioButton[] toneButtons = new RadioButton[3];
+        for (int i = 0; i < 3; i++) {
+            toneButtons[i] = new RadioButton(this);
+            toneButtons[i].setId(android.view.View.generateViewId());
+            toneButtons[i].setText(toneLabels[i]);
+            toneButtons[i].setTextSize(12);
+            toneButtons[i].setTextColor(Color.WHITE);
+            tones.addView(toneButtons[i]);
+        }
+        tones.check(toneButtons[tone(this, widgetId)].getId());
+        root.addView(tones);
         ScrollView scroll = new ScrollView(this);
         LinearLayout options = new LinearLayout(this);
         options.setOrientation(LinearLayout.VERTICAL);
@@ -191,7 +216,9 @@ public class WidgetConfigActivity extends Activity {
                 return;
             }
             saveHabits(this, widgetId, ids);
-            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(), alpha.getProgress());
+            int chosenTone = 2;
+            for (int i = 0; i < toneButtons.length; i++) if (tones.getCheckedRadioButtonId() == toneButtons[i].getId()) chosenTone = i;
+            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(), alpha.getProgress(), chosenTone);
             LoopDotsWidgetProvider.updateWidget(this, AppWidgetManager.getInstance(this), widgetId);
             Intent result = new Intent();
             result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);

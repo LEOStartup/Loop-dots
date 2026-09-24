@@ -90,10 +90,10 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
             if (habit != null) habits.add(habit);
         }
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget);
-        views.removeAllViews(R.id.dots_container);
+
         if (WidgetConfigActivity.glass(context, widgetId)) {
             views.setImageViewBitmap(R.id.glass_background,
-                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId)));
+                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId), WidgetConfigActivity.tone(context, widgetId)));
             views.setViewVisibility(R.id.glass_background, android.view.View.VISIBLE);
         } else {
             views.setViewVisibility(R.id.glass_background, android.view.View.GONE);
@@ -105,25 +105,13 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
             views.setViewVisibility(R.id.prev_month, android.view.View.GONE);
             views.setViewVisibility(R.id.next_month, android.view.View.GONE);
             PendingIntent configure = configurationIntent(context, widgetId);
-            views.setOnClickPendingIntent(R.id.widget_root, configure);
+            views.setViewVisibility(R.id.empty_hint, android.view.View.VISIBLE);
+            views.setViewVisibility(R.id.habit_list, android.view.View.GONE);
+            views.setOnClickPendingIntent(R.id.empty_hint, configure);
             manager.updateAppWidget(widgetId, views);
             return;
         }
 
-        Bundle options = manager.getAppWidgetOptions(widgetId);
-        int minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280);
-        int maxWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minWidth);
-        int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 220);
-        // Width reported by launchers is the relevant usable dp; do not use physical screen width.
-        int width = Math.max(160, minWidth > 0 ? minWidth : maxWidth);
-        int height = Math.max(90, minHeight);
-        int cell = Math.max(17, Math.min(54, (width - 12) / 7));
-        // Fit a header, month navigation, one row per habit and its 5 calendar rows.
-        int rowHeight = Math.max(17, Math.min(cell, (height - 51) / Math.max(1, habits.size() * 5)));
-        int diameter = Math.max(9, Math.min(cell - 5, rowHeight - 3));
-        float density = context.getResources().getDisplayMetrics().density;
-        int dotPixel = Math.max(24, Math.round(diameter * density));
-        Bitmap empty = bitmap(0x66FFFFFF, dotPixel);
         int total = 0;
         for (HabitStore.Habit habit : habits) total += HabitStore.count(context, habit.id);
         views.setTextViewText(R.id.habit_title, habits.size() == 1 ? habits.get(0).name : habits.size() + " hábitos");
@@ -131,55 +119,24 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.month_label, monthLabel(month));
         views.setViewVisibility(R.id.prev_month, android.view.View.VISIBLE);
         views.setViewVisibility(R.id.next_month, android.view.View.VISIBLE);
+        views.setViewVisibility(R.id.empty_hint, android.view.View.GONE);
+        views.setViewVisibility(R.id.habit_list, android.view.View.VISIBLE);
         views.setOnClickPendingIntent(R.id.habit_title, configurationIntent(context, widgetId));
         views.setOnClickPendingIntent(R.id.prev_month, monthIntent(context, widgetId, -1));
         views.setOnClickPendingIntent(R.id.next_month, monthIntent(context, widgetId, 1));
-
-        int monthDays = month.getActualMaximum(Calendar.DAY_OF_MONTH);
-        // For multiple habits use one 7-column calendar per habit, each in its own color.
-        // Five rows show all 28-31 dates with a predictable tap target per dot.
-        for (HabitStore.Habit habit : habits) {
-            RemoteViews label = new RemoteViews(context.getPackageName(), R.layout.habit_label);
-            label.setTextViewText(R.id.row_habit_name, habit.icon + "  " + habit.name);
-            label.setTextColor(R.id.row_habit_name, habit.color);
-            views.addView(R.id.dots_container, label);
-            Set<String> marked = HabitStore.done(context, habit.id);
-            Bitmap filled = bitmap(habit.color, dotPixel);
-            for (int rowIndex = 0; rowIndex < 5; rowIndex++) {
-                RemoteViews row = new RemoteViews(context.getPackageName(), R.layout.dot_row);
-                row.setInt(R.id.dot_row, "setMinimumHeight", rowHeight);
-                for (int column = 0; column < 7; column++) {
-                    int day = rowIndex * 7 + column + 1;
-                    RemoteViews dot = new RemoteViews(context.getPackageName(), R.layout.dot_item);
-                    dot.setInt(R.id.dot_touch, "setMinimumHeight", rowHeight);
-                    dot.setInt(R.id.dot_touch, "setMinimumWidth", cell);
-                    if (day <= monthDays) {
-                        Calendar date = (Calendar) month.clone();
-                        date.set(Calendar.DAY_OF_MONTH, day);
-                        String key = HabitStore.dateKey(date);
-                        dot.setImageViewBitmap(R.id.dot_visual, marked.contains(key) ? filled : empty);
-                        dot.setContentDescription(R.id.dot_touch,
-                                String.format(Locale.getDefault(), "%s, %02d/%02d/%04d", habit.name,
-                                        day, month.get(Calendar.MONTH) + 1, month.get(Calendar.YEAR)));
-                        Intent toggle = new Intent(context, LoopDotsWidgetProvider.class);
-                        toggle.setAction(ACTION_TOGGLE);
-                        toggle.putExtra(EXTRA_DAY, day);
-                        toggle.putExtra(EXTRA_MONTH, monthKey);
-                        toggle.putExtra(EXTRA_HABIT, habit.id);
-                        toggle.putExtra(EXTRA_WIDGET, widgetId);
-                        toggle.setData(Uri.parse("loopdots://widget/" + widgetId + "/" + habit.id + "/" + monthKey + "/" + day));
-                        PendingIntent pending = PendingIntent.getBroadcast(context, 0, toggle,
-                                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        dot.setOnClickPendingIntent(R.id.dot_touch, pending);
-                    } else {
-                        dot.setViewVisibility(R.id.dot_visual, android.view.View.INVISIBLE);
-                    }
-                    row.addView(R.id.dot_row, dot);
-                }
-                views.addView(R.id.dots_container, row);
-            }
-        }
+        Intent service = new Intent(context, HabitRemoteViewsService.class);
+        service.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        service.setData(Uri.parse("loopdots://collection/" + widgetId));
+        views.setRemoteAdapter(R.id.habit_list, service);
+        Intent template = new Intent(context, LoopDotsWidgetProvider.class);
+        template.setAction(ACTION_TOGGLE);
+        template.putExtra(EXTRA_WIDGET, widgetId);
+        template.setData(Uri.parse("loopdots://tap/" + widgetId));
+        PendingIntent pendingTemplate = PendingIntent.getBroadcast(context, 0, template,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+        views.setPendingIntentTemplate(R.id.habit_list, pendingTemplate);
         manager.updateAppWidget(widgetId, views);
+        manager.notifyAppWidgetViewDataChanged(widgetId, R.id.habit_list);
     }
 
     private static PendingIntent configurationIntent(Context context, int widgetId) {
@@ -200,15 +157,17 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static Bitmap glassBitmap(int opacity) {
+    private static Bitmap glassBitmap(int opacity, int tone) {
         int size = 160;
         Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(b);
         int alpha = Math.round(Math.max(0, Math.min(95, opacity)) * 255f / 100f);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        int light = tone == 1 ? 225 : (tone == 0 ? 120 : 90);
+        int dark = tone == 1 ? 165 : (tone == 0 ? 66 : 29);
         paint.setShader(new android.graphics.LinearGradient(0, 0, size, size,
-                new int[] {android.graphics.Color.argb(alpha, 90, 94, 104),
-                           android.graphics.Color.argb(alpha, 29, 31, 38)},
+                new int[] {android.graphics.Color.argb(alpha, light, light, Math.min(255, light + 4)),
+                           android.graphics.Color.argb(alpha, dark, dark, Math.min(255, dark + 9))},
                 null, android.graphics.Shader.TileMode.CLAMP));
         canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
         paint.setShader(null);
