@@ -135,8 +135,8 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         PendingIntent pendingTemplate = PendingIntent.getBroadcast(context, 0, template,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
         views.setPendingIntentTemplate(R.id.habit_list, pendingTemplate);
-        manager.notifyAppWidgetViewDataChanged(widgetId, R.id.habit_list);
         manager.updateAppWidget(widgetId, views);
+        manager.notifyAppWidgetViewDataChanged(widgetId, R.id.habit_list);
     }
 
     private static PendingIntent configurationIntent(Context context, int widgetId) {
