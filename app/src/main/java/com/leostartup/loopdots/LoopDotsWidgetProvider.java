@@ -7,6 +7,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.widget.RemoteViews;
 
 import java.text.DateFormatSymbols;
@@ -69,7 +72,12 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.month_label, monthLabel(now));
         views.setTextViewText(R.id.total_count, totalDoneLabel(prefs));
 
+        // Clear previously added rows before rebuilding the entire month.
+        views.removeAllViews(R.id.dots_container);
         RemoteViews currentRow = new RemoteViews(context.getPackageName(), R.layout.dot_row);
+
+        Bitmap filledDot = dotBitmap(0xFFFF3030);
+        Bitmap emptyDot = dotBitmap(0x55FFFFFF);
 
         for (int day = 1; day <= daysInMonth; day++) {
             if ((day - 1) % 7 == 0 && day > 1) {
@@ -78,12 +86,10 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
             }
 
             RemoteViews dot = new RemoteViews(context.getPackageName(), R.layout.dot_item);
-            int background = done.contains(String.valueOf(day))
-                    ? R.drawable.dot_filled
-                    : R.drawable.dot_empty;
-
-            // ImageView resource updates are supported by RemoteViews; preserve the 44dp touch target.
-            dot.setImageViewResource(R.id.dot_visual, background);
+            // Render the selected state into the actual image, rather than relying on
+            // a nested drawable resource update that some launchers fail to reapply.
+            dot.setImageViewBitmap(R.id.dot_visual,
+                    done.contains(String.valueOf(day)) ? filledDot : emptyDot);
             dot.setContentDescription(R.id.dot_touch, "Dia " + day);
 
             Intent toggle = new Intent(context, LoopDotsWidgetProvider.class)
@@ -105,6 +111,15 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
 
         views.addView(R.id.dots_container, currentRow);
         manager.updateAppWidget(widgetId, views);
+    }
+
+    private Bitmap dotBitmap(int color) {
+        Bitmap bitmap = Bitmap.createBitmap(72, 72, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(color);
+        canvas.drawCircle(36f, 36f, 35f, paint);
+        return bitmap;
     }
 
     private String totalDoneLabel(SharedPreferences prefs) {
