@@ -32,10 +32,14 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
             String month = intent.getStringExtra("month");
             Calendar now = Calendar.getInstance();
             String currentMonth = monthKey(now);
-            if (day > 0 && currentMonth.equals(month)) toggleDay(context, currentMonth, day);
+
+            if (day > 0 && currentMonth.equals(month)) {
+                toggleDay(context, currentMonth, day);
+            }
 
             AppWidgetManager manager = AppWidgetManager.getInstance(context);
-            int[] ids = manager.getAppWidgetIds(new ComponentName(context, LoopDotsWidgetProvider.class));
+            int[] ids = manager.getAppWidgetIds(
+                    new ComponentName(context, LoopDotsWidgetProvider.class));
             for (int id : ids) updateWidget(context, manager, id);
         }
     }
@@ -44,7 +48,11 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         Set<String> done = new HashSet<>(prefs.getStringSet(monthKey, new HashSet<>()));
         String value = String.valueOf(day);
-        if (!done.add(value)) done.remove(value);
+
+        if (!done.add(value)) {
+            done.remove(value);
+        }
+
         prefs.edit().putStringSet(monthKey, done).apply();
     }
 
@@ -71,9 +79,12 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
 
             RemoteViews dot = new RemoteViews(context.getPackageName(), R.layout.dot_item);
             int background = done.contains(String.valueOf(day))
-                    ? R.drawable.dot_filled : R.drawable.dot_empty;
-            dot.setInt(R.id.dot_item, "setBackgroundResource", background);
-            dot.setContentDescription(R.id.dot_item, "Dia " + day);
+                    ? R.drawable.dot_filled
+                    : R.drawable.dot_empty;
+
+            // Keep the visual dot small while giving every day a generous 44dp touch target.
+            dot.setInt(R.id.dot_visual, "setBackgroundResource", background);
+            dot.setContentDescription(R.id.dot_touch, "Dia " + day);
 
             Intent toggle = new Intent(context, LoopDotsWidgetProvider.class)
                     .setAction(ACTION_TOGGLE)
@@ -82,10 +93,13 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
 
             int requestCode = widgetId * 1000 + day;
             PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                    context, requestCode, toggle,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    context,
+                    requestCode,
+                    toggle,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
 
-            dot.setOnClickPendingIntent(R.id.dot_item, pendingIntent);
+            dot.setOnClickPendingIntent(R.id.dot_touch, pendingIntent);
             currentRow.addView(R.id.dot_row, dot);
         }
 
