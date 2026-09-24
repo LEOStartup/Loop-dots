@@ -79,6 +79,14 @@ public class MainActivity extends Activity {
         add.setBackground(bg(0xFF33353B, 15));
         add.setOnClickListener(v -> editHabit(null));
         root.addView(add, new LinearLayout.LayoutParams(-1, dp(54)));
+        gap(root, 10);
+        Button appearance = new Button(this);
+        appearance.setText("Aparência dos widgets");
+        appearance.setAllCaps(false);
+        appearance.setTextColor(Color.WHITE);
+        appearance.setBackground(bg(0xFF25272D, 15));
+        appearance.setOnClickListener(v -> openWidgetAppearance());
+        root.addView(appearance, new LinearLayout.LayoutParams(-1, dp(48)));
         gap(root, 24);
         list = column();
         root.addView(list);
@@ -86,6 +94,28 @@ public class MainActivity extends Activity {
         root.addView(text("Toque em um hábito para editar. Cada widget pode mostrar um hábito diferente.", 12, 0xFF9999A0));
         setContentView(scroll);
         renderList();
+    }
+
+    private void openWidgetAppearance() {
+        AppWidgetManager manager = AppWidgetManager.getInstance(this);
+        int[] ids = manager.getAppWidgetIds(new ComponentName(this, LoopDotsWidgetProvider.class));
+        if (ids.length == 0) {
+            new AlertDialog.Builder(this).setTitle("Nenhum widget instalado")
+                    .setMessage("Adicione o Loop Dots à tela inicial para configurar sua aparência.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        String[] labels = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            java.util.List<String> selected = WidgetConfigActivity.habitIds(this, ids[i]);
+            labels[i] = "Widget " + (i + 1) + " · " + selected.size() + " hábitos";
+        }
+        new AlertDialog.Builder(this).setTitle("Escolha o widget")
+                .setItems(labels, (dialog, index) -> {
+                    Intent intent = new Intent(this, WidgetConfigActivity.class);
+                    intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, ids[index]);
+                    startActivity(intent);
+                }).show();
     }
 
     private void renderList() {
