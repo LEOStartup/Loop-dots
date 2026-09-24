@@ -1,6 +1,6 @@
 <resources>
     <color name="dot_empty">#55FFFFFF</color>
-    <color name="dot_filled">#E53935</color>
+    <color name="dot_filled">#FFFF3030</color>
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#99FFFFFF</color>
 </resources>
