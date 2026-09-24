@@ -71,7 +71,7 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             String monthKey = HabitStore.monthKey(month);
             Bitmap filled = circle(habit.color, dotSize);
             Bitmap empty = circle(0x77FFFFFF, dotSize);
-            // Fourteen columns, two or three rows, give the horizontal reference its compact density.
+            // Compact horizontal rows adapt to the current launcher width.
             for (int row = 0; row < (days + columns - 1) / columns; row++) {
                 RemoteViews week = new RemoteViews(context.getPackageName(), R.layout.widget_week);
                 for (int col = 0; col < columns; col++) {
