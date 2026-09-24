@@ -14,6 +14,9 @@ import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.SeekBar;
+import android.widget.RadioGroup;
+import android.widget.RadioButton;
 import org.json.JSONArray;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +26,18 @@ public class WidgetConfigActivity extends Activity {
     private static final String PREFIX = "widget_";
     private static final String MULTI_PREFIX = "multi_";
     private static final String MONTH_PREFIX = "month_";
+    private static final String GLASS_PREFIX = "glass_";
+    private static final String ALPHA_PREFIX = "alpha_";
+    public static boolean glass(Context context, int id) {
+        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(GLASS_PREFIX + id, false);
+    }
+    public static int opacity(Context context, int id) {
+        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(ALPHA_PREFIX + id, 60);
+    }
+    public static void saveAppearance(Context context, int id, boolean glass, int opacity) {
+        context.getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+            .putBoolean(GLASS_PREFIX + id, glass).putInt(ALPHA_PREFIX + id, opacity).apply();
+    }
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
     public static List<String> habitIds(Context context, int widgetId) {
@@ -70,7 +85,8 @@ public class WidgetConfigActivity extends Activity {
 
     public static void clear(Context context, int widgetId) {
         context.getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(PREFIX + widgetId)
-                .remove(MULTI_PREFIX + widgetId).remove(MONTH_PREFIX + widgetId).apply();
+                .remove(MULTI_PREFIX + widgetId).remove(MONTH_PREFIX + widgetId)
+                .remove(GLASS_PREFIX + widgetId).remove(ALPHA_PREFIX + widgetId).apply();
     }
 
     private int dp(int n) { return (int) (getResources().getDisplayMetrics().density * n + .5f); }
@@ -95,6 +111,54 @@ public class WidgetConfigActivity extends Activity {
         subtitle.setPadding(0, dp(9), 0, dp(14));
         root.addView(subtitle);
 
+        TextView appearance = new TextView(this);
+        appearance.setText("Aparência do widget");
+        appearance.setTextColor(Color.WHITE);
+        appearance.setTextSize(18);
+        appearance.setPadding(0, dp(12), 0, dp(8));
+        root.addView(appearance);
+        RadioGroup style = new RadioGroup(this);
+        style.setOrientation(RadioGroup.HORIZONTAL);
+        RadioButton transparent = new RadioButton(this);
+        transparent.setId(android.view.View.generateViewId());
+        transparent.setText("Transparente");
+        transparent.setTextColor(Color.WHITE);
+        RadioButton frosted = new RadioButton(this);
+        frosted.setId(android.view.View.generateViewId());
+        frosted.setText("Glassmorphism");
+        frosted.setTextColor(Color.WHITE);
+        style.addView(transparent);
+        style.addView(frosted);
+        style.check(glass(this, widgetId) ? frosted.getId() : transparent.getId());
+        root.addView(style);
+        TextView alphaLabel = new TextView(this);
+        alphaLabel.setTextColor(Color.WHITE);
+        alphaLabel.setPadding(0, dp(12), 0, 0);
+        SeekBar alpha = new SeekBar(this);
+        alpha.setMax(95);
+        alpha.setProgress(opacity(this, widgetId));
+        alphaLabel.setText("Intensidade do vidro: " + alpha.getProgress() + "%");
+        alpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                alphaLabel.setText("Intensidade do vidro: " + progress + "%");
+            }
+            public void onStartTrackingTouch(SeekBar bar) {}
+            public void onStopTrackingTouch(SeekBar bar) {}
+        });
+        alpha.setEnabled(style.getCheckedRadioButtonId() == frosted.getId());
+        style.setOnCheckedChangeListener((group, checkedId) -> {
+            boolean enabled = checkedId == frosted.getId();
+            alpha.setEnabled(enabled);
+            alphaLabel.setAlpha(enabled ? 1f : .45f);
+        });
+        alphaLabel.setAlpha(alpha.isEnabled() ? 1f : .45f);
+        root.addView(alphaLabel);
+        root.addView(alpha);
+        TextView note = new TextView(this);
+        note.setText("Vidro translúcido com borda suave. O Android não permite desfocar o papel de parede diretamente neste widget.");
+        note.setTextColor(0xFFAAAAAA);
+        note.setTextSize(12);
+        root.addView(note);
         ScrollView scroll = new ScrollView(this);
         LinearLayout options = new LinearLayout(this);
         options.setOrientation(LinearLayout.VERTICAL);
@@ -116,7 +180,7 @@ public class WidgetConfigActivity extends Activity {
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         Button save = new Button(this);
-        save.setText("Adicionar / atualizar widget");
+        save.setText("Salvar e atualizar widget");
         save.setAllCaps(false);
         save.setEnabled(!habits.isEmpty() && widgetId != AppWidgetManager.INVALID_APPWIDGET_ID);
         save.setOnClickListener(v -> {
@@ -127,6 +191,7 @@ public class WidgetConfigActivity extends Activity {
                 return;
             }
             saveHabits(this, widgetId, ids);
+            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(), alpha.getProgress());
             LoopDotsWidgetProvider.updateWidget(this, AppWidgetManager.getInstance(this), widgetId);
             Intent result = new Intent();
             result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
