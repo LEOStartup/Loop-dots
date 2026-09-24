@@ -91,6 +91,13 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         }
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget);
         views.removeAllViews(R.id.dots_container);
+        if (WidgetConfigActivity.glass(context, widgetId)) {
+            views.setImageViewBitmap(R.id.glass_background,
+                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId)));
+            views.setViewVisibility(R.id.glass_background, android.view.View.VISIBLE);
+        } else {
+            views.setViewVisibility(R.id.glass_background, android.view.View.GONE);
+        }
         if (habits.isEmpty()) {
             views.setTextViewText(R.id.habit_title, "Escolher hábitos");
             views.setTextViewText(R.id.total_count, "");
@@ -191,6 +198,25 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         intent.setData(Uri.parse("loopdots://month/" + widgetId + "/" + delta));
         return PendingIntent.getBroadcast(context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static Bitmap glassBitmap(int opacity) {
+        int size = 160;
+        Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(b);
+        int alpha = Math.round(Math.max(0, Math.min(95, opacity)) * 255f / 100f);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setShader(new android.graphics.LinearGradient(0, 0, size, size,
+                new int[] {android.graphics.Color.argb(alpha, 90, 94, 104),
+                           android.graphics.Color.argb(alpha, 29, 31, 38)},
+                null, android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(2f);
+        paint.setColor(android.graphics.Color.argb(Math.min(220, alpha + 35), 255, 255, 255));
+        canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
+        return b;
     }
 
     private static Bitmap bitmap(int color, int size) {
