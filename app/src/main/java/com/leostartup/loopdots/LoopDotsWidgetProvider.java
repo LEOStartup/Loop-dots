@@ -93,7 +93,7 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
 
         if (WidgetConfigActivity.glass(context, widgetId)) {
             views.setImageViewBitmap(R.id.glass_background,
-                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId)));
+                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId), WidgetConfigActivity.tone(context, widgetId)));
             views.setViewVisibility(R.id.glass_background, android.view.View.VISIBLE);
         } else {
             views.setViewVisibility(R.id.glass_background, android.view.View.GONE);
@@ -157,15 +157,17 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static Bitmap glassBitmap(int opacity) {
+    private static Bitmap glassBitmap(int opacity, int tone) {
         int size = 160;
         Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(b);
         int alpha = Math.round(Math.max(0, Math.min(95, opacity)) * 255f / 100f);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        int light = tone == 1 ? 225 : (tone == 0 ? 120 : 90);
+        int dark = tone == 1 ? 165 : (tone == 0 ? 66 : 29);
         paint.setShader(new android.graphics.LinearGradient(0, 0, size, size,
-                new int[] {android.graphics.Color.argb(alpha, 90, 94, 104),
-                           android.graphics.Color.argb(alpha, 29, 31, 38)},
+                new int[] {android.graphics.Color.argb(alpha, light, light, Math.min(255, light + 4)),
+                           android.graphics.Color.argb(alpha, dark, dark, Math.min(255, dark + 9))},
                 null, android.graphics.Shader.TileMode.CLAMP));
         canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
         paint.setShader(null);
