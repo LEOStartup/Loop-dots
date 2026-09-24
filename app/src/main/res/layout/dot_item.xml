@@ -7,13 +7,13 @@
     android:clickable="true"
     android:focusable="true">
 
-    <TextView
+    <ImageView
         android:id="@+id/dot_visual"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:layout_gravity="center"
-        android:gravity="center"
-        android:background="@drawable/dot_empty"
+        android:src="@drawable/dot_empty"
+        android:contentDescription="@null"
         android:clickable="false"
         android:focusable="false" />
 </FrameLayout>
