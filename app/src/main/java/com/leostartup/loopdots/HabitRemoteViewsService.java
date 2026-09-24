@@ -26,6 +26,7 @@ public class HabitRemoteViewsService extends RemoteViewsService {
         private List<HabitStore.Habit> habits = new ArrayList<>();
         private Calendar month;
         private int dotSize;
+        private int columns;
 
         Factory(Context context, int widgetId) {
             this.context = context;
@@ -47,7 +48,8 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             android.os.Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId);
             int width = Math.max(160, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280));
             // Do not force overflow on narrow launchers; tap targets remain a full column wide.
-            dotSize = Math.max(10, Math.min(22, (width - 36) / 14));
+            columns = width >= 330 ? 16 : (width >= 260 ? 14 : 10);
+            dotSize = Math.max(8, Math.min(18, (width - 36) / (columns + 3)));
         }
 
         @Override public int getCount() { return habits.size(); }
@@ -70,10 +72,10 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             Bitmap filled = circle(habit.color, dotSize);
             Bitmap empty = circle(0x77FFFFFF, dotSize);
             // Fourteen columns, two or three rows, give the horizontal reference its compact density.
-            for (int row = 0; row < 3; row++) {
+            for (int row = 0; row < (days + columns - 1) / columns; row++) {
                 RemoteViews week = new RemoteViews(context.getPackageName(), R.layout.widget_week);
-                for (int col = 0; col < 14; col++) {
-                    int day = row * 14 + col + 1;
+                for (int col = 0; col < columns; col++) {
+                    int day = row * columns + col + 1;
                     RemoteViews dot = new RemoteViews(context.getPackageName(), R.layout.widget_day);
                     if (day <= days) {
                         Calendar date = (Calendar) month.clone();
