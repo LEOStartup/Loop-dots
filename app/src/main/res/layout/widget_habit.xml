@@ -6,11 +6,11 @@
         android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:id="@+id/habit_row_title" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textColor="@android:color/white" android:textSize="12sp"
+            android:textColor="@android:color/white" android:textSize="13sp"
             android:singleLine="true" android:ellipsize="end" android:textStyle="bold"/>
         <TextView android:id="@+id/habit_row_count" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:textColor="@android:color/white"
-            android:textSize="11sp"/>
+            android:textSize="12sp"/>
     </LinearLayout>
     <LinearLayout android:id="@+id/habit_row_dots" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:layout_marginTop="4dp"
