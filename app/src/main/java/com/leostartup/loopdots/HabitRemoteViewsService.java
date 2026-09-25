@@ -104,13 +104,15 @@ public class HabitRemoteViewsService extends RemoteViewsService {
         }
 
         private static Bitmap circle(int color, int size) {
-            int px = Math.max(16, Math.round(size *
-                    android.content.res.Resources.getSystem().getDisplayMetrics().density));
-            Bitmap b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
+            float density = android.content.res.Resources.getSystem().getDisplayMetrics().density;
+            int visualPx = Math.max(12, Math.round(size * density));
+            int gapPx = Math.max(2, Math.round(2f * density));
+            int canvasPx = visualPx + gapPx * 2;
+            Bitmap b = Bitmap.createBitmap(canvasPx, canvasPx, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(b);
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             p.setColor(color);
-            canvas.drawCircle(px / 2f, px / 2f, px / 2f - 1f, p);
+            canvas.drawCircle(canvasPx / 2f, canvasPx / 2f, visualPx / 2f - 1f, p);
             return b;
         }
     }
