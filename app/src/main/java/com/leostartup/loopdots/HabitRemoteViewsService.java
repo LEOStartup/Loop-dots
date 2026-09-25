@@ -46,10 +46,10 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             month.set(Calendar.DAY_OF_MONTH, 1);
             month.add(Calendar.MONTH, WidgetConfigActivity.monthOffset(context, widgetId));
             android.os.Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId);
-            int width = Math.max(110, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280));
+            int width = Math.max(160, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280));
             // Do not force overflow on narrow launchers; tap targets remain a full column wide.
-            columns = width >= 330 ? 16 : (width >= 260 ? 14 : (width >= 190 ? 10 : 7));
-            dotSize = Math.max(6, Math.min(18, (width - 36) / (columns + 3)));
+            columns = width >= 330 ? 16 : (width >= 260 ? 14 : 10);
+            dotSize = Math.max(8, Math.min(18, (width - 36) / (columns + 3)));
         }
 
         @Override public int getCount() { return habits.size(); }
