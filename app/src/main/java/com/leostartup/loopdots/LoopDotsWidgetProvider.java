@@ -96,7 +96,7 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
                     glassTint(WidgetConfigActivity.opacity(context, widgetId), WidgetConfigActivity.tone(context, widgetId)));
             views.setViewVisibility(android.R.id.background, android.view.View.VISIBLE);
         } else {
-            views.setViewVisibility(R.id.glass_background, android.view.View.GONE);
+            views.setViewVisibility(android.R.id.background, android.view.View.GONE);
         }
         if (habits.isEmpty()) {
             views.setTextViewText(R.id.habit_title, "Escolher hábitos");
