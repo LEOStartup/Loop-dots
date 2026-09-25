@@ -46,13 +46,9 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             month.set(Calendar.DAY_OF_MONTH, 1);
             month.add(Calendar.MONTH, WidgetConfigActivity.monthOffset(context, widgetId));
             android.os.Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId);
-            int minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
-            int maxWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0);
-            // DeX/One UI can report landscape and portrait bounds in either order.
-            // Prefer the larger available bound so a desktop resize restores extra columns.
-            int width = Math.max(110, Math.max(minWidth, maxWidth));
+            int width = Math.max(110, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280));
             // Do not force overflow on narrow launchers; tap targets remain a full column wide.
-            columns = width >= 520 ? 31 : (width >= 400 ? 20 : (width >= 330 ? 16 : (width >= 260 ? 14 : (width >= 190 ? 10 : 7))));
+            columns = width >= 330 ? 16 : (width >= 260 ? 14 : (width >= 190 ? 10 : 7));
             dotSize = Math.max(6, Math.min(18, (width - 36) / (columns + 3)));
         }
 
