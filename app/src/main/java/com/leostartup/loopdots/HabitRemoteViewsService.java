@@ -49,7 +49,7 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             int width = Math.max(160, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280));
             // Do not force overflow on narrow launchers; tap targets remain a full column wide.
             columns = width >= 330 ? 16 : (width >= 260 ? 14 : 10);
-            dotSize = Math.max(8, Math.min(18, (width - 36) / (columns + 3)));
+            dotSize = Math.max(9, Math.min(20, (width - 30) / (columns + 2)));
         }
 
         @Override public int getCount() { return habits.size(); }
