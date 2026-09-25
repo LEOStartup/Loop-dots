@@ -92,9 +92,9 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget);
 
         if (WidgetConfigActivity.glass(context, widgetId)) {
-            views.setImageViewBitmap(R.id.glass_background,
-                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId), WidgetConfigActivity.tone(context, widgetId)));
-            views.setViewVisibility(R.id.glass_background, android.view.View.VISIBLE);
+            views.setInt(android.R.id.background, "setBackgroundColor",
+                    glassTint(WidgetConfigActivity.opacity(context, widgetId), WidgetConfigActivity.tone(context, widgetId)));
+            views.setViewVisibility(android.R.id.background, android.view.View.VISIBLE);
         } else {
             views.setViewVisibility(R.id.glass_background, android.view.View.GONE);
         }
@@ -155,6 +155,12 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         intent.setData(Uri.parse("loopdots://month/" + widgetId + "/" + delta));
         return PendingIntent.getBroadcast(context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static int glassTint(int opacity, int tone) {
+        int alpha = Math.max(1, Math.min(254, Math.round(opacity * 255f / 100f)));
+        int rgb = tone == 1 ? 230 : tone == 0 ? 115 : 35;
+        return android.graphics.Color.argb(alpha, rgb, rgb, rgb);
     }
 
     private static Bitmap glassBitmap(int opacity, int tone) {
