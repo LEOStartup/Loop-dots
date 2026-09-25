@@ -172,8 +172,8 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
         paint.setShader(null);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(2f);
-        paint.setColor(android.graphics.Color.argb(Math.min(220, alpha + 35), 255, 255, 255));
+        paint.setStrokeWidth(0.35f);
+        paint.setColor(android.graphics.Color.argb(Math.min(35, alpha / 9), 255, 255, 255));
         canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
         return b;
     }
