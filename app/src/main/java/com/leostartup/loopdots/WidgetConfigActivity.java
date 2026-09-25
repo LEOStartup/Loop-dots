@@ -29,6 +29,8 @@ public class WidgetConfigActivity extends Activity {
     private static final String GLASS_PREFIX = "glass_";
     private static final String ALPHA_PREFIX = "alpha_";
     private static final String TONE_PREFIX = "tone_";
+    private static final String DOT_SIZE_PREFIX = "dot_size_";
+    private static final String TEXT_SIZE_PREFIX = "text_size_";
     public static boolean glass(Context context, int id) {
         return context.getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(GLASS_PREFIX + id, false);
     }
@@ -38,10 +40,17 @@ public class WidgetConfigActivity extends Activity {
     public static int tone(Context context, int id) {
         return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(TONE_PREFIX + id, 2);
     }
-    public static void saveAppearance(Context context, int id, boolean glass, int opacity, int tone) {
+    public static int dotScale(Context context, int id) {
+        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(DOT_SIZE_PREFIX + id, 100);
+    }
+    public static int textScale(Context context, int id) {
+        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(TEXT_SIZE_PREFIX + id, 100);
+    }
+    public static void saveAppearance(Context context, int id, boolean glass, int opacity, int tone, int dotScale, int textScale) {
         context.getSharedPreferences(PREFS, MODE_PRIVATE).edit()
             .putBoolean(GLASS_PREFIX + id, glass).putInt(ALPHA_PREFIX + id, opacity)
-            .putInt(TONE_PREFIX + id, tone).apply();
+            .putInt(TONE_PREFIX + id, tone).putInt(DOT_SIZE_PREFIX + id, dotScale)
+            .putInt(TEXT_SIZE_PREFIX + id, textScale).apply();
     }
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
@@ -92,7 +101,8 @@ public class WidgetConfigActivity extends Activity {
         context.getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(PREFIX + widgetId)
                 .remove(MULTI_PREFIX + widgetId).remove(MONTH_PREFIX + widgetId)
                 .remove(GLASS_PREFIX + widgetId).remove(ALPHA_PREFIX + widgetId)
-                .remove(TONE_PREFIX + widgetId).apply();
+                .remove(TONE_PREFIX + widgetId).remove(DOT_SIZE_PREFIX + widgetId)
+                .remove(TEXT_SIZE_PREFIX + widgetId).apply();
     }
 
     private int dp(int n) { return (int) (getResources().getDisplayMetrics().density * n + .5f); }
@@ -184,6 +194,59 @@ public class WidgetConfigActivity extends Activity {
         }
         tones.check(toneButtons[tone(this, widgetId)].getId());
         root.addView(tones);
+
+        TextView sizeTitle = new TextView(this);
+        sizeTitle.setText("Tamanho no widget");
+        sizeTitle.setTextColor(Color.WHITE);
+        sizeTitle.setTextSize(18);
+        sizeTitle.setPadding(0, dp(14), 0, dp(4));
+        root.addView(sizeTitle);
+
+        TextView dotLabel = new TextView(this);
+        dotLabel.setTextColor(Color.WHITE);
+        SeekBar dotSize = new SeekBar(this);
+        dotSize.setMax(70);
+        dotSize.setProgress(Math.max(0, Math.min(70, dotScale(this, widgetId) - 70)));
+        dotLabel.setText("Bolinhas: " + (dotSize.getProgress() + 70) + "%");
+        root.addView(dotLabel);
+        root.addView(dotSize);
+
+        TextView textLabel = new TextView(this);
+        textLabel.setTextColor(Color.WHITE);
+        textLabel.setPadding(0, dp(8), 0, 0);
+        SeekBar textSize = new SeekBar(this);
+        textSize.setMax(60);
+        textSize.setProgress(Math.max(0, Math.min(60, textScale(this, widgetId) - 70)));
+        textLabel.setText("Texto dos hábitos: " + (textSize.getProgress() + 70) + "%");
+        root.addView(textLabel);
+        root.addView(textSize);
+
+        final int[] previewDot = {dotSize.getProgress() + 70};
+        final int[] previewText = {textSize.getProgress() + 70};
+        Runnable livePreview = () -> {
+            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(),
+                    alpha.getProgress(), tone(this, widgetId), previewDot[0], previewText[0]);
+            LoopDotsWidgetProvider.updateWidget(this, AppWidgetManager.getInstance(this), widgetId);
+        };
+        dotSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                previewDot[0] = progress + 70;
+                dotLabel.setText("Bolinhas: " + previewDot[0] + "%");
+                if (fromUser) livePreview.run();
+            }
+            public void onStartTrackingTouch(SeekBar bar) {}
+            public void onStopTrackingTouch(SeekBar bar) { livePreview.run(); }
+        });
+        textSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                previewText[0] = progress + 70;
+                textLabel.setText("Texto dos hábitos: " + previewText[0] + "%");
+                if (fromUser) livePreview.run();
+            }
+            public void onStartTrackingTouch(SeekBar bar) {}
+            public void onStopTrackingTouch(SeekBar bar) { livePreview.run(); }
+        });
+
         ScrollView scroll = new ScrollView(this);
         LinearLayout options = new LinearLayout(this);
         options.setOrientation(LinearLayout.VERTICAL);
@@ -218,7 +281,8 @@ public class WidgetConfigActivity extends Activity {
             saveHabits(this, widgetId, ids);
             int chosenTone = 2;
             for (int i = 0; i < toneButtons.length; i++) if (tones.getCheckedRadioButtonId() == toneButtons[i].getId()) chosenTone = i;
-            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(), alpha.getProgress(), chosenTone);
+            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(), alpha.getProgress(), chosenTone,
+                    dotSize.getProgress() + 70, textSize.getProgress() + 70);
             LoopDotsWidgetProvider.updateWidget(this, AppWidgetManager.getInstance(this), widgetId);
             Intent result = new Intent();
             result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
