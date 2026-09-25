@@ -36,6 +36,7 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
             int widgetId, Bundle newOptions) {
         super.onAppWidgetOptionsChanged(context, manager, widgetId, newOptions);
         updateWidget(context, manager, widgetId);
+        manager.notifyAppWidgetViewDataChanged(widgetId, R.id.habit_list);
     }
 
     @Override public void onDeleted(Context context, int[] ids) {
