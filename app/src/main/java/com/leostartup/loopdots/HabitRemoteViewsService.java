@@ -49,7 +49,8 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             int width = Math.max(160, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280));
             // Do not force overflow on narrow launchers; tap targets remain a full column wide.
             columns = width >= 330 ? 16 : (width >= 260 ? 14 : 10);
-            dotSize = Math.max(9, Math.min(20, (width - 30) / (columns + 2)));
+            int baseDotSize = Math.max(9, Math.min(20, (width - 30) / (columns + 2)));
+            dotSize = Math.max(6, Math.min(28, Math.round(baseDotSize * WidgetConfigActivity.dotScale(context, widgetId) / 100f)));
         }
 
         @Override public int getCount() { return habits.size(); }
@@ -64,6 +65,9 @@ public class HabitRemoteViewsService extends RemoteViewsService {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_habit);
             views.setTextViewText(R.id.habit_row_title, habit.icon + "  " + habit.name);
             views.setTextColor(R.id.habit_row_title, habit.color);
+            float textScale = WidgetConfigActivity.textScale(context, widgetId) / 100f;
+            views.setTextViewTextSize(R.id.habit_row_title, android.util.TypedValue.COMPLEX_UNIT_SP, 13f * textScale);
+            views.setTextViewTextSize(R.id.habit_row_count, android.util.TypedValue.COMPLEX_UNIT_SP, 12f * textScale);
             views.setTextViewText(R.id.habit_row_count, HabitStore.count(context, habit.id) + " dias");
             views.removeAllViews(R.id.habit_row_dots);
             Set<String> marked = HabitStore.done(context, habit.id);
