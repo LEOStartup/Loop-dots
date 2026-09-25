@@ -1,7 +1,4 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    app:widgetStyle="colorful"
-    app:widgetSize="medium"
     android:minWidth="180dp"
     android:minHeight="160dp"
     android:minResizeWidth="160dp"
