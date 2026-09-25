@@ -44,22 +44,22 @@ jobs:
         run: |
           gradle assembleRelease
           test -s app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk LoopDots-v2.1.apk
+          cp app/build/outputs/apk/release/app-release.apk LoopDots-v2.2.apk
 
       - name: Verify APK signature
         shell: bash
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs LoopDots-v2.1.apk
-          echo "APK_SHA256=$(sha256sum LoopDots-v2.1.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          "$APKSIGNER" verify --verbose --print-certs LoopDots-v2.2.apk
+          echo "APK_SHA256=$(sha256sum LoopDots-v2.2.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Publish direct APK via GitHub Releases
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v2.1 LoopDots-v2.1.apk \
-            --title "Loop Dots v2.1" \
+          gh release create v2.2 LoopDots-v2.2.apk \
+            --title "Loop Dots v2.2" \
             --notes "APK direto, sem ZIP. Assinado com a chave permanente configurada no GitHub. SHA256: $APK_SHA256. Se o aplicativo anterior tiver assinatura debug diferente, uma única reinstalação inicial será necessária." \
             --latest
