@@ -88,6 +88,7 @@ public class HabitRemoteViewsService extends RemoteViewsService {
                         fill.putExtra(LoopDotsWidgetProvider.EXTRA_DAY, day);
                         fill.putExtra(LoopDotsWidgetProvider.EXTRA_MONTH, monthKey);
                         dot.setOnClickFillInIntent(R.id.day_touch, fill);
+                        dot.setOnClickFillInIntent(R.id.day_dot, fill);
                     } else {
                         dot.setViewVisibility(R.id.day_dot, android.view.View.INVISIBLE);
                     }
