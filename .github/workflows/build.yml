@@ -56,23 +56,23 @@ jobs:
         run: |
           gradle test lint assembleRelease || { cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt; exit 1; }
           test -s app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.9.apk
-          cp LoopDots-v1.0.9.apk LoopDots.apk
+          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.10.apk
+          cp LoopDots-v1.0.10.apk LoopDots.apk
 
       - name: Verify APK signature
         shell: bash
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.9.apk
-          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.9.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.10.apk
+          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.10.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Publish direct APK via GitHub Releases
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.0.9 LoopDots-v1.0.9.apk LoopDots.apk \
-            --title "Loop Dots v1.0.9" \
-            --notes "Corrige o reaparecimento do fundo ao fechar popups, a abertura duplicada de menus e o flash ao tocar em configurações. Preserva o fade de 500 ms das abas. Atualização com mesmo applicationId e chave permanente. Instale sobre a versão anterior para manter os dados. SHA256: $APK_SHA256." \
+          gh release create v1.0.10 LoopDots-v1.0.10.apk LoopDots.apk \
+            --title "Loop Dots v1.0.10" \
+            --notes "Aproxima as marcas dos widgets, permite escolher quadradinhos arredondados ou bolas e alinha os dias da semana na lista de hábitos. Atualização com mesmo applicationId e chave permanente. Instale sobre a versão anterior para manter os dados. SHA256: $APK_SHA256." \
             --latest
