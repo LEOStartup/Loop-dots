@@ -48,7 +48,7 @@ jobs:
           LOOP_DOTS_KEY_PASSWORD: ${{ secrets.LOOP_DOTS_KEY_PASSWORD }}
           LOOP_DOTS_STORE_PASSWORD: ${{ secrets.LOOP_DOTS_STORE_PASSWORD }}
         run: |
-          gradle test lint assembleRelease
+          gradle test lint assembleRelease || { cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt; exit 1; }
           test -s app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.5.apk
           cp LoopDots-v1.0.5.apk LoopDots.apk
