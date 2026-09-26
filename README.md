@@ -2,11 +2,15 @@
 
 Android habit tracker with month, week and history views, local statistics and five resizable home-screen widgets.
 
-## Install v1.0.7
+## Install v1.0.8
 
-**[Download LoopDots-v1.0.7.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.7/LoopDots-v1.0.7.apk)**
+**[Download LoopDots-v1.0.8.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.8/LoopDots-v1.0.8.apk)**
 
-Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 23.
+Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 24.
+
+## v1.0.8 transition matching
+
+The new reference recording shows an approximately 500 ms accelerating fade-in on tab content. Only cards/statistics/settings content animates from transparent to opaque; the page title and bottom navigation stay fully painted and stationary. No outgoing page snapshot or horizontal translation is used for tabs. Value changes and repeated taps on the active tab do not restart the fade.
 
 ## v1.0.7 interaction update
 

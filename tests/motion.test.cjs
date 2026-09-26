@@ -72,6 +72,24 @@ const { chromium } = require('playwright');
     await page.evaluate(()=>{closeSheet(true);for(const p of ['month','week','year','stats','settings','month'])navigate(p)});await page.waitForTimeout(400);
     assert.equal(await page.locator('.transition-copy').count(),0);
     assert.equal(await page.locator('#nav .active').getAttribute('aria-label'),'Mês');
+    // Match the demonstrated fade: 500 ms ease-in, content only, no translation.
+    const fade=await page.evaluate(()=>{
+      navigate('week');const content=document.querySelector('#page-content');
+      const animation=content.getAnimations()[0];animation.pause();
+      const timing=animation.effect.getTiming(),samples=[];
+      for(const ms of [0,125,250,375,500]){animation.currentTime=ms;samples.push(Number(getComputedStyle(content).opacity))}
+      const unchangedHeader=getComputedStyle(document.querySelector('.page-head')).opacity==='1';
+      const unchangedNav=getComputedStyle(document.querySelector('#nav')).opacity==='1';
+      const transform=getComputedStyle(content).transform;
+      animation.currentTime=250;
+      navigate('week');const sameAnimation=content.getAnimations()[0]===animation;
+      animation.finish();return {duration:timing.duration,easing:timing.easing,samples,unchangedHeader,unchangedNav,transform,sameAnimation,copies:document.querySelectorAll('.transition-copy').length};
+    });
+    assert.equal(fade.duration,500);assert.equal(fade.easing,'cubic-bezier(0.42, 0, 1, 1)');
+    assert.equal(fade.samples[0],0);assert.equal(fade.samples[4],1);
+    assert.ok(fade.samples[1]>0&&fade.samples[1]<.15);assert.ok(fade.samples[2]>.25&&fade.samples[2]<.4);
+    assert.ok(fade.samples.every((n,i,a)=>i===0||n>=a[i-1]));
+    assert.equal(fade.unchangedHeader,true);assert.equal(fade.unchangedNav,true);assert.equal(fade.transform,'none');assert.equal(fade.sameAnimation,true);assert.equal(fade.copies,0);
     // Record the bar DURING transitions, not just after they have settled.
     const navGeometry = await page.evaluate(async()=>{
       const nav=document.querySelector('#nav'),main=document.querySelector('#app');

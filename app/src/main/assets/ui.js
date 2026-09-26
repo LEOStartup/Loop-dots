@@ -4,11 +4,11 @@ const UI = (() => {
   const ease = 'cubic-bezier(.22,.8,.24,1)';
   const running = new WeakMap();
   const reduced = () => document.documentElement.dataset.motion === 'off' || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function animate(el, frames, duration = 260) {
+  function animate(el, frames, duration = 260, easing = ease) {
     if (!el) return Promise.resolve();
     running.get(el)?.cancel();
     if (reduced()) return Promise.resolve();
-    const animation = el.animate(frames, {duration, easing:ease});
+    const animation = el.animate(frames, {duration, easing});
     running.set(el, animation);
     return animation.finished.catch(() => {}).then(() => {if (running.get(el) === animation) running.delete(el)});
   }
@@ -72,8 +72,10 @@ const UI = (() => {
     // fully painted, so there is no dark midpoint and no translated nav/layout.
     animate(copy,[{opacity:1},{opacity:0}],180).then(()=>copy.remove());
   }
+  // Reference clip: cards fade in over ~500 ms with acceleration; chrome stays opaque.
+  function fadeIn(el) {return animate(el,[{opacity:0},{opacity:1}],500,'cubic-bezier(.42,0,1,1)')}
   function pulse(el) {animate(el,[{transform:'scale(.9)'},{transform:'scale(1)'}],200)}
   function stop(el) {running.get(el)?.cancel();running.delete(el)}
   function cancelAll() {document.getAnimations().forEach(a=>a.finish())}
-  return {patch, animate, swap, pulse, reduced, cancelAll, stop};
+  return {patch, animate, swap, fadeIn, pulse, reduced, cancelAll, stop};
 })();
