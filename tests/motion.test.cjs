@@ -72,12 +72,32 @@ const { chromium } = require('playwright');
     await page.evaluate(()=>{closeSheet(true);for(const p of ['month','week','year','stats','settings','month'])navigate(p)});await page.waitForTimeout(400);
     assert.equal(await page.locator('.transition-copy').count(),0);
     assert.equal(await page.locator('#nav .active').getAttribute('aria-label'),'Mês');
+    // Record the bar DURING transitions, not just after they have settled.
+    const navGeometry = await page.evaluate(async()=>{
+      const nav=document.querySelector('#nav'),main=document.querySelector('#app');
+      const box=()=>{const r=nav.getBoundingClientRect();return [r.x,r.y,r.width,r.height]};
+      const initial=box(),frames=[];
+      for(const tab of ['settings','stats','week','month']){
+        navigate(tab);
+        for(let i=0;i<16;i++){await new Promise(requestAnimationFrame);frames.push({box:box(),opacity:getComputedStyle(main).opacity,transform:getComputedStyle(main).transform})}
+      }
+      navigate('settings');main.scrollTop=main.scrollHeight;const scroll=main.scrollTop;
+      setting('general');
+      for(let i=0;i<22;i++){await new Promise(requestAnimationFrame);frames.push({box:box(),opacity:getComputedStyle(main).opacity,transform:getComputedStyle(main).transform})}
+      closeSheet();
+      for(let i=0;i<22;i++){await new Promise(requestAnimationFrame);frames.push({box:box(),opacity:getComputedStyle(main).opacity,transform:getComputedStyle(main).transform})}
+      return {stable:frames.every(f=>f.box.every((n,i)=>Math.abs(n-initial[i])<.1)),painted:frames.every(f=>f.opacity==='1'&&f.transform==='none'),scrolled:scroll>0,restored:main.scrollTop===scroll,documentScroll:scrollY};
+    });
+    assert.deepEqual(navGeometry,{stable:true,painted:true,scrolled:true,restored:true,documentScroll:0});
+    const button=page.locator('#nav button').first(),before=await button.boundingBox();
+    await button.hover();await page.mouse.down();await page.waitForTimeout(100);
+    assert.deepEqual(await button.boundingBox(),before);await page.mouse.up();
     await page.emulateMedia({reducedMotion:'reduce'});
     await page.evaluate(()=>{navigate('week');editHabit('test')});
     assert.equal(await page.evaluate(()=>document.getAnimations().length),0);
     await page.evaluate(()=>closeSheet());assert.equal(await page.locator('.sheet').count(),0);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     assert.deepEqual(errors,[]);
-    console.log('PASS: retained controls, stable calendar frames, focus/caret/scroll, nested return, close/reopen race, rapid tabs, reduced motion');
+    console.log('PASS: retained controls, stable calendar frames, focus/caret/scroll, nested return, close/reopen race, rapid tabs, fixed navigation during transitions/press/scroll, reduced motion');
   } finally {await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -57,15 +57,20 @@ const UI = (() => {
   }
   const snapshots = new WeakMap();
   function swap(el, update, direction = 1, distance = 12) {
-    snapshots.get(el)?.remove();
+    const previous = snapshots.get(el);
+    if (previous) {stop(previous);previous.remove()}
+    stop(el);
     if (reduced()) {update(); return}
-    const bounds = el.getBoundingClientRect(), copy = el.cloneNode(true);
+    const bounds = el.getBoundingClientRect(), style = getComputedStyle(el), copy = el.cloneNode(true);
     copy.removeAttribute('id'); copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
     copy.classList.add('transition-copy'); copy.setAttribute('aria-hidden','true'); copy.inert = true;
-    Object.assign(copy.style,{position:'fixed',top:bounds.top+'px',left:bounds.left+'px',width:bounds.width+'px',height:bounds.height+'px',margin:'0',pointerEvents:'none',zIndex:el.closest('.sheet')?'34':'9'});
-    document.body.append(copy); snapshots.set(el,copy); update();
-    animate(copy,[{opacity:1,transform:'translateX(0)'},{opacity:0,transform:`translateX(${-direction*distance}px)`}],220).then(()=>copy.remove());
-    animate(el,[{opacity:0,transform:`translateX(${direction*distance}px)`},{opacity:1,transform:'translateX(0)'}],260);
+    const background = getComputedStyle(document.documentElement).getPropertyValue(el.closest('.sheet')?'--sheet':'--bg');
+    Object.assign(copy.style,{position:'fixed',top:bounds.top+'px',left:bounds.left+'px',width:bounds.width+'px',height:bounds.height+'px',minHeight:'0',maxWidth:'none',padding:style.padding,margin:'0',background,opacity:'1',transform:'none',pointerEvents:'none',zIndex:el.closest('.sheet')?'34':'9'});
+    document.body.append(copy); copy.scrollTop=el.scrollTop; snapshots.set(el,copy);
+    update();
+    // Only the opaque outgoing surface dissolves. The incoming page is always
+    // fully painted, so there is no dark midpoint and no translated nav/layout.
+    animate(copy,[{opacity:1},{opacity:0}],180).then(()=>copy.remove());
   }
   function pulse(el) {animate(el,[{transform:'scale(.9)'},{transform:'scale(1)'}],200)}
   function stop(el) {running.get(el)?.cancel();running.delete(el)}

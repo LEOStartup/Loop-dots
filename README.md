@@ -2,11 +2,17 @@
 
 Android habit tracker with month, week and history views, local statistics and five resizable home-screen widgets.
 
-## Install v1.0.6
+## Install v1.0.7
 
-**[Download LoopDots-v1.0.6.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.6/LoopDots-v1.0.6.apk)**
+**[Download LoopDots-v1.0.7.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.7/LoopDots-v1.0.7.apk)**
 
-Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 22.
+Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 23.
+
+## v1.0.7 interaction update
+
+- The bottom navigation remains in a permanent viewport shell while only the main content scrolls. Opening/closing sheets never changes the document position.
+- Tab changes dissolve only the opaque outgoing page over an already-painted incoming page, avoiding the dark midpoint of overlapping fades. Navigation buttons no longer scale on touch.
+- Regression checks sample navigation geometry throughout pressed states, scrolling, tab changes and modal transitions.
 
 ## v1.0.6 interaction update
 

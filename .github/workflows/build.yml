@@ -56,23 +56,23 @@ jobs:
         run: |
           gradle test lint assembleRelease || { cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt; exit 1; }
           test -s app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.6.apk
-          cp LoopDots-v1.0.6.apk LoopDots.apk
+          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.7.apk
+          cp LoopDots-v1.0.7.apk LoopDots.apk
 
       - name: Verify APK signature
         shell: bash
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.6.apk
-          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.6.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.7.apk
+          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.7.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Publish direct APK via GitHub Releases
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.0.6 LoopDots-v1.0.6.apk LoopDots.apk \
-            --title "Loop Dots v1.0.6" \
-            --notes "Correção das piscadas ao tocar: componentes preservados, calendário estável, transições suaves, painéis com fechamento animado e widgets atualizados fora da thread de UI. Atualização com mesmo applicationId e chave permanente. Instale sobre a versão anterior para manter os dados. SHA256: $APK_SHA256." \
+          gh release create v1.0.7 LoopDots-v1.0.7.apk LoopDots.apk \
+            --title "Loop Dots v1.0.7" \
+            --notes "Barra inferior fixa em uma estrutura permanente, rolagem independente e transições sem escurecimento intermediário. Atualização com mesmo applicationId e chave permanente. Instale sobre a versão anterior para manter os dados. SHA256: $APK_SHA256." \
             --latest
