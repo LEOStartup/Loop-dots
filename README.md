@@ -1,13 +1,40 @@
 # Loop Dots
 
-Widget Android minimalista para hábitos, com fundo transparente e marcações por dia.
+Android habit tracker with month, week and history views, local statistics and five resizable home-screen widgets.
 
-## Versão 1.5
-- Tela do aplicativo: criar, renomear e excluir hábitos, selecionar cor e ícone.
-- Um hábito independente para cada widget; toque no título do widget para trocar.
-- Toque em cada bolinha para marcar ou desmarcar a data correspondente.
-- Contador cumulativo por hábito e migração das marcações do hábito original.
-- O calendário acompanha 28, 29, 30 ou 31 dias.
+## Install v1.0.5
 
-O APK de debug é gerado em **Actions > Build Loop Dots APK > Artifacts**.
-A assinatura do APK precisa ser a mesma do aplicativo já instalado para atualizar sem desinstalar.
+**[Download LoopDots-v1.0.5.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.5/LoopDots-v1.0.5.apk)**
+
+Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 21.
+
+## Features
+
+- Month cards, weekly checklist and activity history.
+- Habit names, descriptions, colors, emoji, categories, daily quantities and custom-value entry.
+- Build/quit habits, planned weekdays and streak goals.
+- Long-press actions: complete/uncheck, calendar, notes, edit, share and archive.
+- Per-habit completion statistics, monthly chart and daily/weekly/monthly streak records.
+- Scheduled local reminders (delivery may be delayed by Android battery restrictions).
+- Dark, light and system appearance; Portuguese and English main interface; ordering and start-page settings.
+- Export/import JSON backup through Android's document picker. Imports are validated, previewed and merged by habit ID.
+- Five widgets: small 2×1, compact list 4×1, medium 4×1, grid 3×2 and wide grid 4×2.
+- Transparent, translucent, dark or light widget backgrounds; adjustable mark and text sizes.
+- Tap small/list widget days to record; larger history widgets provide a today button and open the calendar from their history grid.
+
+The app works offline. External project/support links open GitHub in the browser. No analytics, accounts, ads or paid subscription. Emoji appearance follows the Android system font.
+
+## Data migration
+
+The first launch reads the previous `habits_v2` list and `done_v2_<id>` date sets, keeping IDs, colors, icons, names and marked dates. The original keys remain intact. A `migration_snapshot_v3` is retained alongside the new `document_v3`. Each save retains the previous document. Dates are local calendar keys, never UTC-truncated timestamps.
+
+## Build and verify
+
+Java 17, Gradle 8.7, Android SDK 35.
+
+```sh
+node --test tests/core.test.cjs
+gradle test lint assembleRelease
+```
+
+The release workflow verifies the permanent keystore, runs tests/lint, compiles, verifies the APK signature and publishes a direct APK asset. Signing secrets are documented in [SIGNING.md](SIGNING.md).

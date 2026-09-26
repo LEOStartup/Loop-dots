@@ -1,301 +1,43 @@
 package com.leostartup.loopdots;
-
-import android.app.Activity;
-import android.appwidget.AppWidgetManager;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
+import android.app.*;
+import android.appwidget.*;
+import android.content.*;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.TextView;
-import android.widget.SeekBar;
-import android.widget.RadioGroup;
-import android.widget.RadioButton;
-import org.json.JSONArray;
-import java.util.ArrayList;
-import java.util.List;
+import android.widget.*;
+import java.util.*;
+import org.json.*;
 
 public class WidgetConfigActivity extends Activity {
-    private static final String PREFS = "widget_config";
-    private static final String PREFIX = "widget_";
-    private static final String MULTI_PREFIX = "multi_";
-    private static final String MONTH_PREFIX = "month_";
-    private static final String GLASS_PREFIX = "glass_";
-    private static final String ALPHA_PREFIX = "alpha_";
-    private static final String TONE_PREFIX = "tone_";
-    private static final String DOT_SIZE_PREFIX = "dot_size_";
-    private static final String TEXT_SIZE_PREFIX = "text_size_";
-    public static boolean glass(Context context, int id) {
-        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(GLASS_PREFIX + id, false);
-    }
-    public static int opacity(Context context, int id) {
-        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(ALPHA_PREFIX + id, 60);
-    }
-    public static int tone(Context context, int id) {
-        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(TONE_PREFIX + id, 2);
-    }
-    public static int dotScale(Context context, int id) {
-        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(DOT_SIZE_PREFIX + id, 100);
-    }
-    public static int textScale(Context context, int id) {
-        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(TEXT_SIZE_PREFIX + id, 100);
-    }
-    public static void saveAppearance(Context context, int id, boolean glass, int opacity, int tone, int dotScale, int textScale) {
-        context.getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-            .putBoolean(GLASS_PREFIX + id, glass).putInt(ALPHA_PREFIX + id, opacity)
-            .putInt(TONE_PREFIX + id, tone).putInt(DOT_SIZE_PREFIX + id, dotScale)
-            .putInt(TEXT_SIZE_PREFIX + id, textScale).apply();
-    }
-    private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
-
-    public static List<String> habitIds(Context context, int widgetId) {
-        SharedPreferences p = context.getSharedPreferences(PREFS, MODE_PRIVATE);
-        List<String> ids = new ArrayList<>();
-        String json = p.getString(MULTI_PREFIX + widgetId, null);
-        if (json != null) {
-            try {
-                JSONArray array = new JSONArray(json);
-                for (int i = 0; i < array.length(); i++) {
-                    String id = array.optString(i);
-                    if (!id.isEmpty() && !ids.contains(id) && HabitStore.get(context, id) != null) ids.add(id);
-                }
-            } catch (Exception ignored) {}
-        } else {
-            // Previously installed widgets keep their one selected habit.
-            String old = p.getString(PREFIX + widgetId, null);
-            if (old != null && HabitStore.get(context, old) != null) ids.add(old);
-        }
-        return ids;
-    }
-
-    public static String habitId(Context context, int widgetId) {
-        List<String> ids = habitIds(context, widgetId);
-        return ids.isEmpty() ? null : ids.get(0);
-    }
-
-    public static void saveHabits(Context context, int widgetId, List<String> ids) {
-        JSONArray array = new JSONArray();
-        for (String id : ids) if (HabitStore.get(context, id) != null) array.put(id);
-        context.getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                .putString(MULTI_PREFIX + widgetId, array.toString())
-                .remove(PREFIX + widgetId).apply();
-    }
-
-    public static int monthOffset(Context context, int widgetId) {
-        return context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(MONTH_PREFIX + widgetId, 0);
-    }
-
-    public static void changeMonth(Context context, int widgetId, int delta) {
-        SharedPreferences p = context.getSharedPreferences(PREFS, MODE_PRIVATE);
-        int offset = p.getInt(MONTH_PREFIX + widgetId, 0);
-        p.edit().putInt(MONTH_PREFIX + widgetId, Math.max(-1200, Math.min(1200, offset + delta))).apply();
-    }
-
-    public static void clear(Context context, int widgetId) {
-        context.getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(PREFIX + widgetId)
-                .remove(MULTI_PREFIX + widgetId).remove(MONTH_PREFIX + widgetId)
-                .remove(GLASS_PREFIX + widgetId).remove(ALPHA_PREFIX + widgetId)
-                .remove(TONE_PREFIX + widgetId).remove(DOT_SIZE_PREFIX + widgetId)
-                .remove(TEXT_SIZE_PREFIX + widgetId).apply();
-    }
-
-    private int dp(int n) { return (int) (getResources().getDisplayMetrics().density * n + .5f); }
-
-    @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
-        setResult(RESULT_CANCELED);
-        widgetId = getIntent().getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
-                AppWidgetManager.INVALID_APPWIDGET_ID);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(36), dp(24), dp(24));
-        root.setBackgroundColor(0xFF141519);
-        TextView title = new TextView(this);
-        title.setText("Escolher hábitos");
-        title.setTextSize(25);
-        title.setTextColor(Color.WHITE);
-        root.addView(title);
-        TextView subtitle = new TextView(this);
-        subtitle.setText("Marque vários hábitos. Cada um terá sua própria cor no calendário.");
-        subtitle.setTextColor(0xFFAAAAAA);
-        subtitle.setPadding(0, dp(9), 0, dp(14));
-        root.addView(subtitle);
-
-        TextView appearance = new TextView(this);
-        appearance.setText("Aparência do widget");
-        appearance.setTextColor(Color.WHITE);
-        appearance.setTextSize(18);
-        appearance.setPadding(0, dp(12), 0, dp(8));
-        root.addView(appearance);
-        RadioGroup style = new RadioGroup(this);
-        style.setOrientation(RadioGroup.HORIZONTAL);
-        RadioButton transparent = new RadioButton(this);
-        transparent.setId(android.view.View.generateViewId());
-        transparent.setText("Transparente");
-        transparent.setTextColor(Color.WHITE);
-        RadioButton frosted = new RadioButton(this);
-        frosted.setId(android.view.View.generateViewId());
-        frosted.setText("Glassmorphism");
-        frosted.setTextColor(Color.WHITE);
-        style.addView(transparent);
-        style.addView(frosted);
-        style.check(glass(this, widgetId) ? frosted.getId() : transparent.getId());
-        root.addView(style);
-        TextView alphaLabel = new TextView(this);
-        alphaLabel.setTextColor(Color.WHITE);
-        alphaLabel.setPadding(0, dp(12), 0, 0);
-        SeekBar alpha = new SeekBar(this);
-        alpha.setMax(95);
-        alpha.setProgress(opacity(this, widgetId));
-        alphaLabel.setText("Intensidade do vidro: " + alpha.getProgress() + "%");
-        alpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                alphaLabel.setText("Intensidade do vidro: " + progress + "%");
-            }
-            public void onStartTrackingTouch(SeekBar bar) {}
-            public void onStopTrackingTouch(SeekBar bar) {}
-        });
-        alpha.setEnabled(style.getCheckedRadioButtonId() == frosted.getId());
-        style.setOnCheckedChangeListener((group, checkedId) -> {
-            boolean enabled = checkedId == frosted.getId();
-            alpha.setEnabled(enabled);
-            alphaLabel.setAlpha(enabled ? 1f : .45f);
-        });
-        alphaLabel.setAlpha(alpha.isEnabled() ? 1f : .45f);
-        root.addView(alphaLabel);
-        root.addView(alpha);
-        TextView note = new TextView(this);
-        note.setText("Vidro translúcido com borda suave. O Android não permite desfocar o papel de parede diretamente neste widget.");
-        note.setTextColor(0xFFAAAAAA);
-        note.setTextSize(12);
-        root.addView(note);
-        TextView toneTitle = new TextView(this);
-        toneTitle.setText("Cor de fundo");
-        toneTitle.setTextColor(Color.WHITE);
-        toneTitle.setPadding(0, dp(12), 0, 0);
-        root.addView(toneTitle);
-        RadioGroup tones = new RadioGroup(this);
-        tones.setOrientation(RadioGroup.HORIZONTAL);
-        String[] toneLabels = {"Auto", "Claro", "Escuro"};
-        RadioButton[] toneButtons = new RadioButton[3];
-        for (int i = 0; i < 3; i++) {
-            toneButtons[i] = new RadioButton(this);
-            toneButtons[i].setId(android.view.View.generateViewId());
-            toneButtons[i].setText(toneLabels[i]);
-            toneButtons[i].setTextSize(12);
-            toneButtons[i].setTextColor(Color.WHITE);
-            tones.addView(toneButtons[i]);
-        }
-        tones.check(toneButtons[tone(this, widgetId)].getId());
-        root.addView(tones);
-
-        TextView sizeTitle = new TextView(this);
-        sizeTitle.setText("Tamanho no widget");
-        sizeTitle.setTextColor(Color.WHITE);
-        sizeTitle.setTextSize(18);
-        sizeTitle.setPadding(0, dp(14), 0, dp(4));
-        root.addView(sizeTitle);
-
-        TextView dotLabel = new TextView(this);
-        dotLabel.setTextColor(Color.WHITE);
-        SeekBar dotSize = new SeekBar(this);
-        dotSize.setMax(70);
-        dotSize.setProgress(Math.max(0, Math.min(70, dotScale(this, widgetId) - 70)));
-        dotLabel.setText("Bolinhas: " + (dotSize.getProgress() + 70) + "%");
-        root.addView(dotLabel);
-        root.addView(dotSize);
-
-        TextView textLabel = new TextView(this);
-        textLabel.setTextColor(Color.WHITE);
-        textLabel.setPadding(0, dp(8), 0, 0);
-        SeekBar textSize = new SeekBar(this);
-        textSize.setMax(60);
-        textSize.setProgress(Math.max(0, Math.min(60, textScale(this, widgetId) - 70)));
-        textLabel.setText("Texto dos hábitos: " + (textSize.getProgress() + 70) + "%");
-        root.addView(textLabel);
-        root.addView(textSize);
-
-        final int[] previewDot = {dotSize.getProgress() + 70};
-        final int[] previewText = {textSize.getProgress() + 70};
-        Runnable livePreview = () -> {
-            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(),
-                    alpha.getProgress(), tone(this, widgetId), previewDot[0], previewText[0]);
-            LoopDotsWidgetProvider.updateWidget(this, AppWidgetManager.getInstance(this), widgetId);
-        };
-        dotSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                previewDot[0] = progress + 70;
-                dotLabel.setText("Bolinhas: " + previewDot[0] + "%");
-                if (fromUser) livePreview.run();
-            }
-            public void onStartTrackingTouch(SeekBar bar) {}
-            public void onStopTrackingTouch(SeekBar bar) { livePreview.run(); }
-        });
-        textSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                previewText[0] = progress + 70;
-                textLabel.setText("Texto dos hábitos: " + previewText[0] + "%");
-                if (fromUser) livePreview.run();
-            }
-            public void onStartTrackingTouch(SeekBar bar) {}
-            public void onStopTrackingTouch(SeekBar bar) { livePreview.run(); }
-        });
-
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout options = new LinearLayout(this);
-        options.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(options);
-        List<HabitStore.Habit> habits = HabitStore.all(this);
-        List<String> selected = habitIds(this, widgetId);
-        List<CheckBox> checks = new ArrayList<>();
-        for (HabitStore.Habit habit : habits) {
-            CheckBox option = new CheckBox(this);
-            option.setText(habit.icon + "  " + habit.name);
-            option.setTextSize(17);
-            option.setTextColor(Color.WHITE);
-            option.setButtonTintList(ColorStateList.valueOf(habit.color));
-            option.setChecked(selected.contains(habit.id));
-            option.setPadding(0, dp(6), 0, dp(6));
-            checks.add(option);
-            options.addView(option);
-        }
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        Button save = new Button(this);
-        save.setText("Salvar e atualizar widget");
-        save.setAllCaps(false);
-        save.setEnabled(!habits.isEmpty() && widgetId != AppWidgetManager.INVALID_APPWIDGET_ID);
-        save.setOnClickListener(v -> {
-            List<String> ids = new ArrayList<>();
-            for (int i = 0; i < checks.size(); i++) if (checks.get(i).isChecked()) ids.add(habits.get(i).id);
-            if (ids.isEmpty()) {
-                android.widget.Toast.makeText(this, "Selecione ao menos um hábito", android.widget.Toast.LENGTH_SHORT).show();
-                return;
-            }
-            saveHabits(this, widgetId, ids);
-            int chosenTone = 2;
-            for (int i = 0; i < toneButtons.length; i++) if (tones.getCheckedRadioButtonId() == toneButtons[i].getId()) chosenTone = i;
-            saveAppearance(this, widgetId, style.getCheckedRadioButtonId() == frosted.getId(), alpha.getProgress(), chosenTone,
-                    dotSize.getProgress() + 70, textSize.getProgress() + 70);
-            LoopDotsWidgetProvider.updateWidget(this, AppWidgetManager.getInstance(this), widgetId);
-            Intent result = new Intent();
-            result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-            setResult(RESULT_OK, result);
-            finish();
-        });
-        root.addView(save);
-        TextView hint = new TextView(this);
-        hint.setText(habits.isEmpty() ? "Abra o Loop Dots e crie um hábito primeiro." :
-                "Para criar hábitos ou mudar suas cores, abra o aplicativo Loop Dots.");
-        hint.setTextColor(0xFFAAAAAA);
-        hint.setPadding(0, dp(12), 0, 0);
-        root.addView(hint);
-        setContentView(root);
+    private int widgetId;private static final String PREFS="widget_config";
+    public static List<String> habitIds(Context c,int id){android.content.SharedPreferences p=c.getSharedPreferences(PREFS,0);List<String> out=new ArrayList<>();String raw=p.getString("multi_"+id,null);try{if(raw!=null){JSONArray a=new JSONArray(raw);for(int i=0;i<a.length();i++)if(DataStore.habit(c,a.optString(i))!=null)out.add(a.optString(i));}else{String old=p.getString("widget_"+id,null);if(old!=null&&DataStore.habit(c,old)!=null)out.add(old);}}catch(Exception ignored){}return out;}
+    public static String habitId(Context c,int id){List<String> a=habitIds(c,id);return a.isEmpty()?null:a.get(0);}
+    public static int dotScale(Context c,int id){return c.getSharedPreferences(PREFS,0).getInt("dot_size_"+id,100);}
+    public static int textScale(Context c,int id){return c.getSharedPreferences(PREFS,0).getInt("text_size_"+id,100);}
+    public static boolean glass(Context c,int id){return c.getSharedPreferences(PREFS,0).getBoolean("glass_"+id,false);}
+    public static int opacity(Context c,int id){return c.getSharedPreferences(PREFS,0).getInt("alpha_"+id,80);}
+    public static int tone(Context c,int id){return c.getSharedPreferences(PREFS,0).getInt("tone_"+id,2);}
+    public static int monthOffset(Context c,int id){return c.getSharedPreferences(PREFS,0).getInt("month_"+id,0);}
+    public static int background(Context c,int id){return c.getSharedPreferences(PREFS,0).getInt("background_"+id,glass(c,id)?1:0);}
+    public static void changeMonth(Context c,int id,int delta){c.getSharedPreferences(PREFS,0).edit().putInt("month_"+id,monthOffset(c,id)+delta).apply();}
+    public static void saveHabits(Context c,int id,List<String> ids){c.getSharedPreferences(PREFS,0).edit().putString("multi_"+id,new JSONArray(ids).toString()).apply();}
+    public static void clear(Context c,int id){android.content.SharedPreferences.Editor e=c.getSharedPreferences(PREFS,0).edit();for(String prefix:new String[]{"widget_","multi_","month_","glass_","alpha_","tone_","dot_size_","text_size_","background_"})e.remove(prefix+id);e.apply();}
+    private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
+    private TextView label(String t,int sp){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(sp);v.setPadding(0,dp(12),0,dp(7));return v;}
+    @Override public void onCreate(Bundle b){super.onCreate(b);setResult(RESULT_CANCELED);widgetId=getIntent().getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,-1);if(widgetId==-1){finish();return;}
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(0xff101010);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(22),dp(30),dp(22),dp(30));scroll.addView(root);root.addView(label("Configurar widget",26));
+        root.addView(label("Escolha os hábitos",16));JSONArray hs=DataStore.habits(this);List<String> ids=new ArrayList<>();List<CheckBox> checks=new ArrayList<>();List<String> selected=habitIds(this,widgetId);boolean compact=LoopDotsWidgetProvider.kind(this,widgetId)==1;
+        for(int i=0;i<hs.length();i++){JSONObject h=hs.optJSONObject(i);if(h==null||h.optBoolean("archived"))continue;String id=h.optString("id");CheckBox cb=new CheckBox(this);cb.setText(h.optString("icon")+"  "+h.optString("name"));cb.setTextColor(Color.WHITE);cb.setTextSize(17);cb.setButtonTintList(android.content.res.ColorStateList.valueOf(Color.parseColor(h.optString("color","#ef4444"))));cb.setChecked(selected.contains(id));root.addView(cb);ids.add(id);checks.add(cb);cb.setOnCheckedChangeListener((v,on)->{if(on&&!compact)for(CheckBox other:checks)if(other!=cb)other.setChecked(false);});}
+        root.addView(label(compact?"A lista compacta mostra vários hábitos.":"Este formato mostra um hábito por widget.",12));
+        if(ids.isEmpty()){Button create=new Button(this);create.setText("Criar hábito no aplicativo");root.addView(create);create.setOnClickListener(v->startActivity(new Intent(this,MainActivity.class)));}
+        root.addView(label("Fundo",16));RadioGroup bg=new RadioGroup(this);String[] names={"Transparente","Translúcido","Escuro","Claro"};for(int i=0;i<4;i++){RadioButton rb=new RadioButton(this);rb.setId(200+i);rb.setText(names[i]);rb.setTextColor(Color.WHITE);bg.addView(rb);}bg.check(200+background(this,widgetId));root.addView(bg);
+        TextView aLabel=label("Opacidade: "+opacity(this,widgetId)+"%",15);root.addView(aLabel);SeekBar alpha=new SeekBar(this);alpha.setMax(100);alpha.setProgress(opacity(this,widgetId));root.addView(alpha);
+        TextView dLabel=label("Tamanho das marcas: "+dotScale(this,widgetId)+"%",15);root.addView(dLabel);SeekBar dot=new SeekBar(this);dot.setMax(70);dot.setProgress(Math.max(0,Math.min(70,dotScale(this,widgetId)-70)));root.addView(dot);
+        TextView tLabel=label("Tamanho do texto: "+textScale(this,widgetId)+"%",15);root.addView(tLabel);SeekBar text=new SeekBar(this);text.setMax(60);text.setProgress(Math.max(0,Math.min(60,textScale(this,widgetId)-70)));root.addView(text);
+        Runnable preview=()->{getSharedPreferences(PREFS,0).edit().putInt("background_"+widgetId,bg.getCheckedRadioButtonId()-200).putInt("alpha_"+widgetId,alpha.getProgress()).putInt("dot_size_"+widgetId,dot.getProgress()+70).putInt("text_size_"+widgetId,text.getProgress()+70).apply();LoopDotsWidgetProvider.updateWidget(this,AppWidgetManager.getInstance(this),widgetId);};
+        SeekBar.OnSeekBarChangeListener listener=new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int p,boolean user){aLabel.setText("Opacidade: "+alpha.getProgress()+"%");dLabel.setText("Tamanho das marcas: "+(dot.getProgress()+70)+"%");tLabel.setText("Tamanho do texto: "+(text.getProgress()+70)+"%");if(user)preview.run();}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){preview.run();}};alpha.setOnSeekBarChangeListener(listener);dot.setOnSeekBarChangeListener(listener);text.setOnSeekBarChangeListener(listener);bg.setOnCheckedChangeListener((g,i)->preview.run());
+        root.addView(label("O tamanho se ajusta ao espaço disponível. Toque no título para abrir o calendário; ⚙ abre esta configuração.",12));Button save=new Button(this);save.setText("Salvar e atualizar widget");save.setAllCaps(false);save.setTextColor(Color.BLACK);save.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff91c443));root.addView(save,new LinearLayout.LayoutParams(-1,dp(54)));save.setOnClickListener(v->{List<String> chosen=new ArrayList<>();for(int i=0;i<checks.size();i++)if(checks.get(i).isChecked()){chosen.add(ids.get(i));if(!compact)break;}if(chosen.isEmpty()){Toast.makeText(this,"Selecione um hábito",Toast.LENGTH_SHORT).show();return;}saveHabits(this,widgetId,chosen);preview.run();setResult(RESULT_OK,new Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,widgetId));finish();});setContentView(scroll);
+        root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(22),dp(22)+insets.getSystemWindowInsetTop(),dp(22),dp(22)+insets.getSystemWindowInsetBottom());return insets;});
     }
 }

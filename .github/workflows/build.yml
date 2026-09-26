@@ -20,6 +20,12 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test calendar, streaks and import validation
+        run: node --test tests/core.test.cjs
+
       - name: Validate persistent signing secrets
         shell: bash
         env:
@@ -42,24 +48,25 @@ jobs:
           LOOP_DOTS_KEY_PASSWORD: ${{ secrets.LOOP_DOTS_KEY_PASSWORD }}
           LOOP_DOTS_STORE_PASSWORD: ${{ secrets.LOOP_DOTS_STORE_PASSWORD }}
         run: |
-          gradle assembleRelease
+          gradle test lint assembleRelease
           test -s app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.4.apk
+          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.5.apk
+          cp LoopDots-v1.0.5.apk LoopDots.apk
 
       - name: Verify APK signature
         shell: bash
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.4.apk
-          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.4.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.5.apk
+          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.5.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Publish direct APK via GitHub Releases
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.0.4 LoopDots-v1.0.4.apk \
-            --title "Loop Dots v1.0.4" \
-            --notes "APK direto, sem ZIP. Assinado com a chave permanente configurada no GitHub. SHA256: $APK_SHA256. Se o aplicativo anterior tiver assinatura debug diferente, uma única reinstalação inicial será necessária." \
+          gh release create v1.0.5 LoopDots-v1.0.5.apk LoopDots.apk \
+            --title "Loop Dots v1.0.5" \
+            --notes "Interface Mês/Semana/Ano, estatísticas, notas, lembretes, backup e cinco widgets. Atualização com mesmo applicationId e chave permanente. Instale sobre a versão anterior para manter os dados. SHA256: $APK_SHA256." \
             --latest

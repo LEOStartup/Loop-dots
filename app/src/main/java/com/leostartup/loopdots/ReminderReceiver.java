@@ -1,0 +1,17 @@
+package com.leostartup.loopdots;
+import android.app.*;
+import android.content.*;
+import android.os.Build;
+import org.json.*;
+import java.util.*;
+public class ReminderReceiver extends BroadcastReceiver {
+    private static final String CHANNEL="habit_reminders";
+    public static void schedule(Context c){
+        NotificationManager nm=c.getSystemService(NotificationManager.class);nm.createNotificationChannel(new NotificationChannel(CHANNEL,"Lembretes de hábitos",NotificationManager.IMPORTANCE_DEFAULT));
+        AlarmManager am=c.getSystemService(AlarmManager.class);PendingIntent pi=PendingIntent.getBroadcast(c,810,new Intent(c,ReminderReceiver.class).setAction("REMIND"),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);am.cancel(pi);
+        long next=Long.MAX_VALUE;JSONArray hs=DataStore.habits(c);long now=System.currentTimeMillis();
+        for(int i=0;i<hs.length();i++){JSONObject h=hs.optJSONObject(i);if(h==null||h.optBoolean("archived"))continue;JSONArray days=h.optJSONArray("reminderDays");if(days==null||days.length()==0)continue;String[] tm=h.optString("reminderTime","12:00").split(":");if(tm.length!=2)continue;try{for(int offset=0;offset<=7;offset++){Calendar d=Calendar.getInstance();d.add(Calendar.DATE,offset);d.set(Calendar.HOUR_OF_DAY,Integer.parseInt(tm[0]));d.set(Calendar.MINUTE,Integer.parseInt(tm[1]));d.set(Calendar.SECOND,0);d.set(Calendar.MILLISECOND,0);boolean ok=false;for(int j=0;j<days.length();j++)if(days.optInt(j)==d.get(Calendar.DAY_OF_WEEK)-1)ok=true;if(ok&&d.getTimeInMillis()>now+1000){next=Math.min(next,d.getTimeInMillis());break;}}}catch(Exception ignored){}}
+        if(next!=Long.MAX_VALUE)am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next,pi);
+    }
+    @Override public void onReceive(Context c,Intent intent){if("REMIND".equals(intent.getAction())){Calendar now=Calendar.getInstance();int minute=now.get(Calendar.HOUR_OF_DAY)*60+now.get(Calendar.MINUTE);JSONArray hs=DataStore.habits(c);for(int i=0;i<hs.length();i++){JSONObject h=hs.optJSONObject(i);if(h==null||h.optBoolean("archived")||DataStore.done(h,DataStore.today()))continue;JSONArray days=h.optJSONArray("reminderDays");boolean today=false;for(int j=0;days!=null&&j<days.length();j++)if(days.optInt(j)==now.get(Calendar.DAY_OF_WEEK)-1)today=true;String[] tm=h.optString("reminderTime","12:00").split(":");try{int scheduled=Integer.parseInt(tm[0])*60+Integer.parseInt(tm[1]);if(today&&minute>=scheduled&&minute-scheduled<180){String marker=h.optString("id")+"_"+DataStore.today();if(c.getSharedPreferences("reminded",0).getBoolean(marker,false))continue;Intent open=new Intent(c,MainActivity.class).putExtra("habit",h.optString("id")).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);PendingIntent p=PendingIntent.getActivity(c,h.optString("id").hashCode(),open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);Notification n=new Notification.Builder(c,CHANNEL).setSmallIcon(R.drawable.ic_habit).setContentTitle(h.optString("icon")+" "+h.optString("name")).setContentText("Hora de cuidar do seu hábito.").setContentIntent(p).setAutoCancel(true).build();if(Build.VERSION.SDK_INT<33||c.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)==android.content.pm.PackageManager.PERMISSION_GRANTED){c.getSystemService(NotificationManager.class).notify(h.optString("id").hashCode(),n);c.getSharedPreferences("reminded",0).edit().putBoolean(marker,true).apply();}}}catch(Exception ignored){}}}schedule(c);LoopDotsWidgetProvider.refreshAll(c);}
+}

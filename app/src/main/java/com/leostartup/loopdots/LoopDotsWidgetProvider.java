@@ -1,195 +1,48 @@
 package com.leostartup.loopdots;
-
-import android.app.PendingIntent;
-import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProvider;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Paint;
+import android.app.*;
+import android.appwidget.*;
+import android.content.*;
+import android.graphics.*;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.RemoteViews;
-import java.text.DateFormatSymbols;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
+import org.json.*;
 
 public class LoopDotsWidgetProvider extends AppWidgetProvider {
-    public static final String ACTION_TOGGLE = "com.leostartup.loopdots.TOGGLE_DAY";
-    public static final String ACTION_MONTH = "com.leostartup.loopdots.CHANGE_MONTH";
-    public static final String EXTRA_DAY = "day";
-    public static final String EXTRA_MONTH = "month";
-    public static final String EXTRA_HABIT = "habit";
-    public static final String EXTRA_WIDGET = "widget";
-    public static final String EXTRA_DELTA = "delta";
-
-    @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        for (int id : ids) updateWidget(context, manager, id);
+    public static final String ACTION_TOGGLE="com.leostartup.loopdots.TOGGLE_DAY",ACTION_MONTH="com.leostartup.loopdots.CHANGE_MONTH";
+    public static final String EXTRA_DAY="day",EXTRA_MONTH="month",EXTRA_HABIT="habit",EXTRA_WIDGET="widget",EXTRA_DELTA="delta";
+    public static final Class<?>[] TYPES={SmallWidget.class,CompactWidget.class,LoopDotsWidgetProvider.class,GridWidget.class,WideWidget.class};
+    public static int kind(Context c,int id){AppWidgetProviderInfo i=AppWidgetManager.getInstance(c).getAppWidgetInfo(id);if(i==null)return 2;String n=i.provider.getClassName();for(int x=0;x<TYPES.length;x++)if(TYPES[x].getName().equals(n))return x;return 2;}
+    @Override public void onUpdate(Context c,AppWidgetManager m,int[] ids){for(int id:ids)updateWidget(c,m,id);}
+    @Override public void onAppWidgetOptionsChanged(Context c,AppWidgetManager m,int id,Bundle b){updateWidget(c,m,id);}
+    @Override public void onDeleted(Context c,int[] ids){for(int id:ids)WidgetConfigActivity.clear(c,id);}
+    @Override public void onReceive(Context c,Intent i){super.onReceive(c,i);if(ACTION_TOGGLE.equals(i.getAction())){String habit=i.getStringExtra("habit"),date=i.getStringExtra("date");int wid=i.getIntExtra("widget",-1);if(habit!=null&&date!=null&&date.matches("\\d{4}-\\d{2}-\\d{2}")&&WidgetConfigActivity.habitIds(c,wid).contains(habit)){DataStore.toggle(c,habit,date);refreshAll(c);}}else if(Intent.ACTION_DATE_CHANGED.equals(i.getAction())||Intent.ACTION_TIME_CHANGED.equals(i.getAction())||Intent.ACTION_TIMEZONE_CHANGED.equals(i.getAction()))refreshAll(c);}
+    public static void refreshAll(Context c){AppWidgetManager m=AppWidgetManager.getInstance(c);for(Class<?> cl:TYPES)for(int id:m.getAppWidgetIds(new ComponentName(c,cl)))updateWidget(c,m,id);}
+    private static PendingIntent open(Context c,int id,String habit,boolean config){Intent i=new Intent(c,config?WidgetConfigActivity.class:MainActivity.class);i.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id);i.putExtra("habit",habit);i.setData(Uri.parse("loopdots://"+(config?"config":"open")+"/"+id+"/"+habit));i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);return PendingIntent.getActivity(c,0,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
+    private static PendingIntent toggle(Context c,int id,String habit,String date){Intent i=new Intent(c,LoopDotsWidgetProvider.class).setAction(ACTION_TOGGLE).putExtra("widget",id).putExtra("habit",habit).putExtra("date",date).setData(Uri.parse("loopdots://day/"+id+"/"+habit+"/"+date));return PendingIntent.getBroadcast(c,0,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
+    public static void updateWidget(Context c,AppWidgetManager m,int id){
+        RemoteViews v=new RemoteViews(c.getPackageName(),R.layout.widget);int type=kind(c,id),bg=WidgetConfigActivity.background(c,id);int fg=bg==3?Color.BLACK:Color.WHITE;
+        v.setImageViewBitmap(R.id.glass_background,background(bg,WidgetConfigActivity.opacity(c,id)));
+        v.setOnClickPendingIntent(R.id.configure,open(c,id,"",true));v.setOnClickPendingIntent(R.id.empty_hint,open(c,id,"",true));
+        List<JSONObject> hs=new ArrayList<>();for(String hid:WidgetConfigActivity.habitIds(c,id)){JSONObject h=DataStore.habit(c,hid);if(h!=null&&!h.optBoolean("archived"))hs.add(h);}
+        v.setViewVisibility(R.id.widget_rows,View.GONE);v.setViewVisibility(R.id.grid_bitmap,View.GONE);
+        if(hs.isEmpty()){v.setTextViewText(R.id.habit_title,"Loop Dots");v.setTextViewText(R.id.habit_icon,"✓");v.setTextViewText(R.id.total_count,"");v.setViewVisibility(R.id.empty_hint,View.VISIBLE);v.setViewVisibility(R.id.check_today,View.GONE);v.setTextViewText(R.id.month_label,"");m.updateAppWidget(id,v);return;}
+        v.setViewVisibility(R.id.empty_hint,View.GONE);JSONObject h=hs.get(0);String hid=h.optString("id");int color=Color.parseColor(h.optString("color","#ef4444"));float text=WidgetConfigActivity.textScale(c,id)/100f;
+        v.setTextViewText(R.id.habit_icon,type==1?"▦":h.optString("icon","✓"));v.setTextViewText(R.id.habit_title,type==1?hs.size()+" hábitos":h.optString("name"));v.setTextColor(R.id.habit_title,fg);v.setTextColor(R.id.total_count,fg);v.setTextColor(R.id.check_today,DataStore.done(h,DataStore.today())?color:fg);
+        v.setTextViewTextSize(R.id.habit_title,android.util.TypedValue.COMPLEX_UNIT_SP,14*text);v.setTextViewTextSize(R.id.total_count,android.util.TypedValue.COMPLEX_UNIT_SP,10*text);
+        v.setTextViewText(R.id.total_count,"🔥"+DataStore.streak(h));v.setOnClickPendingIntent(R.id.habit_title,open(c,id,hid,false));v.setOnClickPendingIntent(R.id.habit_icon,open(c,id,hid,false));v.setOnClickPendingIntent(R.id.check_today,toggle(c,id,hid,DataStore.today()));
+        v.setViewVisibility(R.id.check_today,type==0||type==1?View.GONE:View.VISIBLE);
+        Calendar now=Calendar.getInstance();String month=new java.text.SimpleDateFormat("MMM yyyy",new Locale("pt","BR")).format(now.getTime());
+        v.setTextViewText(R.id.month_label,type==0?month:type==1?"       Seg    Ter    Qua    Qui    Sex    Sáb    Dom":h.optString("description","").isEmpty()?DataStore.count(h)+" dias concluídos":h.optString("description"));
+        if(type==0||type==1){v.setViewVisibility(R.id.widget_rows,View.VISIBLE);v.removeAllViews(R.id.widget_rows);
+            if(type==0){Calendar first=(Calendar)now.clone();first.set(Calendar.DAY_OF_MONTH,1);int off=(first.get(Calendar.DAY_OF_WEEK)+5)%7;int days=first.getActualMaximum(Calendar.DAY_OF_MONTH);first.add(Calendar.DATE,-off);int rows=(off+days+6)/7;for(int r=0;r<rows;r++){RemoteViews row=new RemoteViews(c.getPackageName(),R.layout.widget_week);for(int col=0;col<7;col++){Calendar d=(Calendar)first.clone();d.add(Calendar.DATE,r*7+col);row.addView(R.id.week_row,cell(c,id,h,d,d.get(Calendar.MONTH)!=now.get(Calendar.MONTH),bg));}v.addView(R.id.widget_rows,row);}}
+            else {int height=m.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,100);int limit=Math.max(1,(height-38)/18);for(int j=0;j<Math.min(hs.size(),limit);j++){JSONObject item=hs.get(j);RemoteViews row=new RemoteViews(c.getPackageName(),R.layout.widget_week),label=new RemoteViews(c.getPackageName(),R.layout.widget_compact_label);label.setTextViewText(R.id.compact_label,item.optString("icon","✓"));label.setOnClickPendingIntent(R.id.compact_label,open(c,id,item.optString("id"),false));row.addView(R.id.week_row,label);Calendar first=(Calendar)now.clone();first.add(Calendar.DATE,-((first.get(Calendar.DAY_OF_WEEK)+5)%7));for(int col=0;col<7;col++){Calendar d=(Calendar)first.clone();d.add(Calendar.DATE,col);row.addView(R.id.week_row,cell(c,id,item,d,false,bg));}v.addView(R.id.widget_rows,row);}}
+        }else{v.setViewVisibility(R.id.grid_bitmap,View.VISIBLE);int width=Math.max(160,m.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300));int height=Math.max(60,m.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,140)-52);v.setImageViewBitmap(R.id.grid_bitmap,heatmap(h,width-20,height,type,WidgetConfigActivity.dotScale(c,id),bg));v.setOnClickPendingIntent(R.id.grid_bitmap,open(c,id,hid,false));}
+        m.updateAppWidget(id,v);
     }
-
-    @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
-            int widgetId, Bundle newOptions) {
-        super.onAppWidgetOptionsChanged(context, manager, widgetId, newOptions);
-        updateWidget(context, manager, widgetId);
-    }
-
-    @Override public void onDeleted(Context context, int[] ids) {
-        for (int id : ids) WidgetConfigActivity.clear(context, id);
-    }
-
-    @Override public void onReceive(Context context, Intent intent) {
-        super.onReceive(context, intent);
-        if (ACTION_MONTH.equals(intent.getAction())) {
-            int widgetId = intent.getIntExtra(EXTRA_WIDGET, AppWidgetManager.INVALID_APPWIDGET_ID);
-            int delta = intent.getIntExtra(EXTRA_DELTA, 0);
-            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID && (delta == -1 || delta == 1)) {
-                WidgetConfigActivity.changeMonth(context, widgetId, delta);
-                updateWidget(context, AppWidgetManager.getInstance(context), widgetId);
-            }
-            return;
-        }
-        if (!ACTION_TOGGLE.equals(intent.getAction())) return;
-        int day = intent.getIntExtra(EXTRA_DAY, -1);
-        String month = intent.getStringExtra(EXTRA_MONTH);
-        String habitId = intent.getStringExtra(EXTRA_HABIT);
-        int widgetId = intent.getIntExtra(EXTRA_WIDGET, AppWidgetManager.INVALID_APPWIDGET_ID);
-        Calendar displayed = Calendar.getInstance();
-        displayed.set(Calendar.DAY_OF_MONTH, 1);
-        displayed.add(Calendar.MONTH, WidgetConfigActivity.monthOffset(context, widgetId));
-        // Reject old PendingIntents after navigation or configuration changes.
-        if (month != null && month.equals(HabitStore.monthKey(displayed))
-                && day > 0 && day <= displayed.getActualMaximum(Calendar.DAY_OF_MONTH)
-                && habitId != null && WidgetConfigActivity.habitIds(context, widgetId).contains(habitId)) {
-            displayed.set(Calendar.DAY_OF_MONTH, day);
-            String key = HabitStore.dateKey(displayed);
-            Set<String> done = HabitStore.done(context, habitId);
-            HabitStore.setDone(context, habitId, key, !done.contains(key));
-        }
-        refreshAll(context);
-    }
-
-    public static void refreshAll(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(context, LoopDotsWidgetProvider.class));
-        for (int id : ids) updateWidget(context, manager, id);
-    }
-
-    public static void updateWidget(Context context, AppWidgetManager manager, int widgetId) {
-        Calendar month = Calendar.getInstance();
-        month.set(Calendar.DAY_OF_MONTH, 1);
-        month.add(Calendar.MONTH, WidgetConfigActivity.monthOffset(context, widgetId));
-        String monthKey = HabitStore.monthKey(month);
-        List<HabitStore.Habit> habits = new ArrayList<>();
-        for (String id : WidgetConfigActivity.habitIds(context, widgetId)) {
-            HabitStore.Habit habit = HabitStore.get(context, id);
-            if (habit != null) habits.add(habit);
-        }
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget);
-
-        if (WidgetConfigActivity.glass(context, widgetId)) {
-            views.setImageViewBitmap(R.id.glass_background,
-                    glassBitmap(WidgetConfigActivity.opacity(context, widgetId), WidgetConfigActivity.tone(context, widgetId)));
-            views.setViewVisibility(R.id.glass_background, android.view.View.VISIBLE);
-        } else {
-            views.setViewVisibility(R.id.glass_background, android.view.View.GONE);
-        }
-        if (habits.isEmpty()) {
-            views.setTextViewText(R.id.habit_title, "Escolher hábitos");
-            views.setTextViewText(R.id.total_count, "");
-            views.setTextViewText(R.id.month_label, "Toque para configurar");
-            views.setViewVisibility(R.id.prev_month, android.view.View.GONE);
-            views.setViewVisibility(R.id.next_month, android.view.View.GONE);
-            PendingIntent configure = configurationIntent(context, widgetId);
-            views.setViewVisibility(R.id.empty_hint, android.view.View.VISIBLE);
-            views.setViewVisibility(R.id.habit_list, android.view.View.GONE);
-            views.setOnClickPendingIntent(R.id.empty_hint, configure);
-            manager.updateAppWidget(widgetId, views);
-            return;
-        }
-
-        int total = 0;
-        for (HabitStore.Habit habit : habits) total += HabitStore.count(context, habit.id);
-        views.setTextViewText(R.id.habit_title, habits.size() == 1 ? habits.get(0).name : habits.size() + " hábitos");
-        views.setTextViewText(R.id.total_count, total + " dias");
-        views.setTextViewText(R.id.month_label, monthLabel(month));
-        views.setViewVisibility(R.id.prev_month, android.view.View.VISIBLE);
-        views.setViewVisibility(R.id.next_month, android.view.View.VISIBLE);
-        views.setViewVisibility(R.id.empty_hint, android.view.View.GONE);
-        views.setViewVisibility(R.id.habit_list, android.view.View.VISIBLE);
-        views.setOnClickPendingIntent(R.id.habit_title, configurationIntent(context, widgetId));
-        views.setOnClickPendingIntent(R.id.prev_month, monthIntent(context, widgetId, -1));
-        views.setOnClickPendingIntent(R.id.next_month, monthIntent(context, widgetId, 1));
-        Intent service = new Intent(context, HabitRemoteViewsService.class);
-        service.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-        service.setData(Uri.parse("loopdots://collection/" + widgetId));
-        views.setRemoteAdapter(R.id.habit_list, service);
-        Intent template = new Intent(context, LoopDotsWidgetProvider.class);
-        template.setAction(ACTION_TOGGLE);
-        template.putExtra(EXTRA_WIDGET, widgetId);
-        template.setData(Uri.parse("loopdots://tap/" + widgetId));
-        PendingIntent pendingTemplate = PendingIntent.getBroadcast(context, 0, template,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
-        views.setPendingIntentTemplate(R.id.habit_list, pendingTemplate);
-        manager.updateAppWidget(widgetId, views);
-        manager.notifyAppWidgetViewDataChanged(widgetId, R.id.habit_list);
-    }
-
-    private static PendingIntent configurationIntent(Context context, int widgetId) {
-        Intent intent = new Intent(context, WidgetConfigActivity.class);
-        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-        intent.setData(Uri.parse("loopdots://configure/" + widgetId));
-        return PendingIntent.getActivity(context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private static PendingIntent monthIntent(Context context, int widgetId, int delta) {
-        Intent intent = new Intent(context, LoopDotsWidgetProvider.class);
-        intent.setAction(ACTION_MONTH);
-        intent.putExtra(EXTRA_WIDGET, widgetId);
-        intent.putExtra(EXTRA_DELTA, delta);
-        intent.setData(Uri.parse("loopdots://month/" + widgetId + "/" + delta));
-        return PendingIntent.getBroadcast(context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private static Bitmap glassBitmap(int opacity, int tone) {
-        int size = 160;
-        Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(b);
-        int alpha = Math.round(Math.max(0, Math.min(95, opacity)) * 255f / 100f);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        int light = tone == 1 ? 225 : (tone == 0 ? 120 : 90);
-        int dark = tone == 1 ? 165 : (tone == 0 ? 66 : 29);
-        paint.setShader(new android.graphics.LinearGradient(0, 0, size, size,
-                new int[] {android.graphics.Color.argb(alpha, light, light, Math.min(255, light + 4)),
-                           android.graphics.Color.argb(alpha, dark, dark, Math.min(255, dark + 9))},
-                null, android.graphics.Shader.TileMode.CLAMP));
-        canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
-        paint.setShader(null);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(0.35f);
-        paint.setColor(android.graphics.Color.argb(Math.min(35, alpha / 9), 255, 255, 255));
-        canvas.drawRoundRect(2, 2, size - 2, size - 2, 17, 17, paint);
-        return b;
-    }
-
-    private static Bitmap bitmap(int color, int size) {
-        Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(b);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(color);
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f - 1, paint);
-        return b;
-    }
-
-    private static String monthLabel(Calendar calendar) {
-        String name = new DateFormatSymbols(new Locale("pt", "BR")).getMonths()[calendar.get(Calendar.MONTH)];
-        return name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1)
-                + " " + calendar.get(Calendar.YEAR);
-    }
+    private static RemoteViews cell(Context c,int id,JSONObject h,Calendar date,boolean outside,int bg){RemoteViews cell=new RemoteViews(c.getPackageName(),R.layout.widget_cell);String k=DataStore.dateKey(date);Bitmap b=Bitmap.createBitmap(48,48,Bitmap.Config.ARGB_8888);Canvas cv=new Canvas(b);Paint p=new Paint(3);int color=Color.parseColor(h.optString("color","#ef4444"));p.setColor(outside?(bg==3?0x11888888:0x11666666):DataStore.done(h,k)?color:(color&0xffffff)|(bg==3?0x33000000:0x25000000));float scale=Math.min(1.0f,WidgetConfigActivity.dotScale(c,id)/140f),size=40*scale,left=(48-size)/2;cv.drawRoundRect(left,left,48-left,48-left,8,8,p);if(k.equals(DataStore.today())){p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2);p.setColor(bg==3?0xff888888:0xffbbbbbb);cv.drawRoundRect(left,left,48-left,48-left,8,8,p);}cell.setImageViewBitmap(R.id.cell_image,b);cell.setContentDescription(R.id.cell_image,h.optString("name")+", "+k);if(!outside&&k.compareTo(DataStore.today())<=0)cell.setOnClickPendingIntent(R.id.cell_image,toggle(c,id,h.optString("id"),k));return cell;}
+    private static Bitmap background(int mode,int opacity){Bitmap b=Bitmap.createBitmap(200,200,Bitmap.Config.ARGB_8888);if(mode==0)return b;Canvas cv=new Canvas(b);Paint p=new Paint(3);p.setColor(mode==3?0xfffafafa:mode==2?0xff101010:Color.argb(Math.round(opacity*2.55f),25,25,28));cv.drawRoundRect(0,0,200,200,16,16,p);return b;}
+    private static Bitmap heatmap(JSONObject h,int width,int height,int type,int scale,int bg){int w=Math.max(200,Math.min(1000,width*2)),hh=Math.max(70,Math.min(500,height*2));Bitmap b=Bitmap.createBitmap(w,hh,Bitmap.Config.ARGB_8888);Canvas cv=new Canvas(b);Paint p=new Paint(3);int columns=type==2?32:type==3?26:36;float cellW=(float)w/columns,cellH=(float)hh/7,size=Math.min(cellW,cellH)*Math.min(.88f,.70f*scale/100f),left=(cellW-size)/2;Calendar first=Calendar.getInstance();first.add(Calendar.DATE,-((first.get(Calendar.DAY_OF_WEEK)+5)%7));first.add(Calendar.DATE,-(columns-1)*7);int color=Color.parseColor(h.optString("color","#ef4444"));for(int col=0;col<columns;col++)for(int row=0;row<7;row++){Calendar d=(Calendar)first.clone();d.add(Calendar.DATE,col*7+row);String k=DataStore.dateKey(d);boolean done=DataStore.done(h,k);p.setStyle(Paint.Style.FILL);p.setColor(done?color:(color&0xffffff)|(bg==3?0x33000000:0x26000000));float x=col*cellW+left,y=row*cellH+(cellH-size)/2;cv.drawRoundRect(x,y,x+size,y+size,Math.max(2,size*.22f),Math.max(2,size*.22f),p);if(k.equals(DataStore.today())){p.setColor(0xffaaaaaa);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1);cv.drawRoundRect(x,y,x+size,y+size,2,2,p);}}return b;}
 }

@@ -1,230 +1,45 @@
 package com.leostartup.loopdots;
-
-import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.*;
 import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
-import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.TextView;
-import java.text.DateFormatSymbols;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Locale;
+import android.content.*;
+import android.net.Uri;
+import android.os.*;
+import android.webkit.*;
+import android.view.*;
+import android.widget.*;
+import org.json.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
-    private LinearLayout list;
-    private int chosenColor = HabitStore.COLORS[0];
-    private String chosenIcon = "✓";
-
-    private int dp(float value) { return (int) (getResources().getDisplayMetrics().density * value + .5f); }
-
-    private GradientDrawable bg(int color, int radius) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(color); g.setCornerRadius(dp(radius)); return g;
+    private WebView web; private boolean loaded=false; private String initial="";
+    @Override public void onCreate(Bundle b){super.onCreate(b);initial=getIntent().getStringExtra("habit");if(initial==null)initial="";
+        if(Build.VERSION.SDK_INT>=30)getWindow().setDecorFitsSystemWindows(false);else getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        getWindow().setStatusBarColor(0xff101010);getWindow().setNavigationBarColor(0xff030303);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(0xff101010);
+        root.setOnApplyWindowInsetsListener((v,insets)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets i=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(i.left,i.top,i.right,i.bottom);}else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
+        web=new WebView(this);web.setBackgroundColor(0xff101010);root.addView(web,new LinearLayout.LayoutParams(-1,-1));setContentView(root);
+        WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(false);s.setAllowFileAccess(false);s.setAllowContentAccess(false);s.setAllowFileAccessFromFileURLs(false);s.setAllowUniversalAccessFromFileURLs(false);s.setTextZoom(100);
+        web.addJavascriptInterface(new Bridge(),"Android");web.setWebViewClient(new WebViewClient(){@Override public boolean shouldOverrideUrlLoading(WebView w,WebResourceRequest r){return !r.getUrl().toString().startsWith("file:///android_asset/");}@Override public void onPageFinished(WebView w,String u){loaded=true;}});
+        web.loadUrl("file:///android_asset/index.html");ReminderReceiver.schedule(this);
     }
-
-    private TextView text(String value, int sp, int color) {
-        TextView v = new TextView(this);
-        v.setText(value); v.setTextSize(sp); v.setTextColor(color);
-        v.setGravity(Gravity.CENTER_VERTICAL); return v;
+    @Override protected void onResume(){super.onResume();if(web!=null&&loaded){web.evaluateJavascript("refreshFromNative()",null);ReminderReceiver.schedule(this);}}
+    @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);String id=i.getStringExtra("habit");if(id!=null&&web!=null)web.evaluateJavascript("refreshFromNative();openHabit("+JSONObject.quote(id)+")",null);}
+    @Override public void onBackPressed(){if(web==null){super.onBackPressed();return;}web.evaluateJavascript("nativeBack()",result->{if(!"true".equals(result))finish();});}
+    private void toast(String t){runOnUiThread(()->Toast.makeText(this,t,Toast.LENGTH_LONG).show());}
+    private void call(String script){runOnUiThread(()->web.evaluateJavascript(script,null));}
+    public final class Bridge {
+        @JavascriptInterface public String load(){return DataStore.load(MainActivity.this).toString();}
+        @JavascriptInterface public String initialHabit(){return initial;}
+        @JavascriptInterface public void overlay(boolean open){}
+        @JavascriptInterface public void save(String raw){try{DataStore.save(MainActivity.this,raw);runOnUiThread(()->{LoopDotsWidgetProvider.refreshAll(MainActivity.this);ReminderReceiver.schedule(MainActivity.this);});}catch(Exception e){toast("Falha ao salvar: "+e.getMessage());}}
+        @JavascriptInterface public void haptic(){runOnUiThread(()->web.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP));}
+        @JavascriptInterface public void notifications(){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},30);});}
+        @JavascriptInterface public void openUrl(String url){if(!url.startsWith("https://github.com/LEOStartup/Loop-dots"))return;runOnUiThread(()->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){toast("Nenhum navegador disponível");}});}
+        @JavascriptInterface public void share(String text){runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,text);startActivity(Intent.createChooser(i,"Compartilhar"));});}
+        @JavascriptInterface public void exportBackup(){runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/json");i.putExtra(Intent.EXTRA_TITLE,"LoopDots-backup-"+DataStore.today()+".json");startActivityForResult(i,101);});}
+        @JavascriptInterface public void importBackup(){runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/json","text/plain","application/octet-stream"});startActivityForResult(i,102);});}
+        @JavascriptInterface public void pinWidget(int type){runOnUiThread(()->{Class<?>[] types={SmallWidget.class,CompactWidget.class,LoopDotsWidgetProvider.class,GridWidget.class,WideWidget.class};int n=Math.max(0,Math.min(4,type));AppWidgetManager m=AppWidgetManager.getInstance(MainActivity.this);if(m.isRequestPinAppWidgetSupported()){m.requestPinAppWidget(new ComponentName(MainActivity.this,types[n]),null,null);toast("Confirme a adição e toque no widget para configurar.");}else toast("Adicione pela lista de widgets da tela inicial.");});}
     }
-
-    private LinearLayout column() {
-        LinearLayout v = new LinearLayout(this);
-        v.setOrientation(LinearLayout.VERTICAL); return v;
-    }
-
-    private void gap(LinearLayout parent, int height) {
-        View v = new View(this); parent.addView(v, new LinearLayout.LayoutParams(1, dp(height)));
-    }
-
-    @Override public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        showHome();
-    }
-
-    @Override protected void onResume() {
-        super.onResume();
-        if (list != null) renderList();
-    }
-
-    private void showHome() {
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(0xFF101114);
-        LinearLayout root = column();
-        root.setPadding(dp(22), dp(42), dp(22), dp(28));
-        scroll.addView(root);
-        TextView title = text("Loop Dots", 30, Color.WHITE);
-        title.setTypeface(null, Typeface.BOLD);
-        root.addView(title);
-        gap(root, 7);
-        root.addView(text("Seus hábitos, um dia de cada vez.", 14, 0xFFB4B4BA));
-        gap(root, 24);
-        Button add = new Button(this);
-        add.setText("+  Novo hábito");
-        add.setTextColor(Color.WHITE);
-        add.setAllCaps(false);
-        add.setBackground(bg(0xFF33353B, 15));
-        add.setOnClickListener(v -> editHabit(null));
-        root.addView(add, new LinearLayout.LayoutParams(-1, dp(54)));
-        gap(root, 10);
-        Button appearance = new Button(this);
-        appearance.setText("Aparência dos widgets");
-        appearance.setAllCaps(false);
-        appearance.setTextColor(Color.WHITE);
-        appearance.setBackground(bg(0xFF25272D, 15));
-        appearance.setOnClickListener(v -> openWidgetAppearance());
-        root.addView(appearance, new LinearLayout.LayoutParams(-1, dp(48)));
-        gap(root, 24);
-        list = column();
-        root.addView(list);
-        gap(root, 20);
-        root.addView(text("Toque em um hábito para editar. Cada widget pode mostrar um hábito diferente.", 12, 0xFF9999A0));
-        setContentView(scroll);
-        renderList();
-    }
-
-    private void openWidgetAppearance() {
-        AppWidgetManager manager = AppWidgetManager.getInstance(this);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(this, LoopDotsWidgetProvider.class));
-        if (ids.length == 0) {
-            new AlertDialog.Builder(this).setTitle("Nenhum widget instalado")
-                    .setMessage("Adicione o Loop Dots à tela inicial para configurar sua aparência.")
-                    .setPositiveButton("OK", null).show();
-            return;
-        }
-        String[] labels = new String[ids.length];
-        for (int i = 0; i < ids.length; i++) {
-            java.util.List<String> selected = WidgetConfigActivity.habitIds(this, ids[i]);
-            labels[i] = "Widget " + (i + 1) + " · " + selected.size() + " hábitos";
-        }
-        new AlertDialog.Builder(this).setTitle("Escolha o widget")
-                .setItems(labels, (dialog, index) -> {
-                    Intent intent = new Intent(this, WidgetConfigActivity.class);
-                    intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, ids[index]);
-                    startActivity(intent);
-                }).show();
-    }
-
-    private void renderList() {
-        if (list == null) return;
-        list.removeAllViews();
-        List<HabitStore.Habit> habits = HabitStore.all(this);
-        if (habits.isEmpty()) {
-            list.addView(text("Nenhum hábito cadastrado. Toque em Novo hábito.", 15, 0xFFBBBBBB));
-        }
-        for (HabitStore.Habit h : habits) {
-            LinearLayout item = new LinearLayout(this);
-            item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setPadding(dp(15), dp(12), dp(12), dp(12));
-            item.setBackground(bg(0xFF202126, 16));
-            TextView marker = text(h.icon, 23, h.color);
-            marker.setGravity(Gravity.CENTER);
-            item.addView(marker, new LinearLayout.LayoutParams(dp(42), dp(44)));
-            LinearLayout labels = column();
-            TextView name = text(h.name, 17, Color.WHITE);
-            name.setTypeface(null, Typeface.BOLD);
-            labels.addView(name);
-            labels.addView(text(HabitStore.count(this, h.id) + " dias concluídos", 12, 0xFFAAAAAA));
-            item.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
-            TextView edit = text("Editar  ›", 13, 0xFFCCCCCC);
-            item.addView(edit);
-            item.setOnClickListener(v -> editHabit(h));
-            list.addView(item);
-            gap(list, 10);
-        }
-        TextView info = text("Adicione o widget pela tela inicial do Android e selecione o hábito.", 12, 0xFF9999A0);
-        info.setPadding(0, dp(10), 0, 0);
-        list.addView(info);
-    }
-
-    private void editHabit(HabitStore.Habit current) {
-        chosenColor = current == null ? HabitStore.COLORS[0] : current.color;
-        chosenIcon = current == null ? "✓" : current.icon;
-        LinearLayout form = column();
-        form.setPadding(dp(20), dp(8), dp(20), 0);
-        EditText name = new EditText(this);
-        name.setSingleLine(true);
-        name.setHint("Ex.: Meditação, correr com o cachorro...");
-        name.setText(current == null ? "" : current.name);
-        form.addView(name, new LinearLayout.LayoutParams(-1, dp(62)));
-        gap(form, 12);
-        form.addView(text("Cor das bolinhas", 14, 0xFF777777));
-        LinearLayout colors = new LinearLayout(this);
-        colors.setGravity(Gravity.CENTER_VERTICAL);
-        for (int c : HabitStore.COLORS) {
-            TextView chip = text("●", 28, c);
-            chip.setGravity(Gravity.CENTER);
-            colors.addView(chip, new LinearLayout.LayoutParams(0, dp(46), 1));
-            chip.setOnClickListener(v -> {
-                chosenColor = c;
-                for (int i = 0; i < colors.getChildCount(); i++) {
-                    colors.getChildAt(i).setAlpha(colors.getChildAt(i) == chip ? 1f : .36f);
-                }
-            });
-            chip.setAlpha(c == chosenColor ? 1f : .36f);
-        }
-        form.addView(colors);
-        gap(form, 12);
-        form.addView(text("Ícone", 14, 0xFF777777));
-        final String[] icons = {"✓", "✦", "♥", "★", "☀", "●"};
-        LinearLayout iconRow = new LinearLayout(this);
-        for (String icon : icons) {
-            TextView chip = text(icon, 23, 0xFF333333);
-            chip.setGravity(Gravity.CENTER);
-            iconRow.addView(chip, new LinearLayout.LayoutParams(0, dp(45), 1));
-            chip.setAlpha(icon.equals(chosenIcon) ? 1f : .36f);
-            chip.setOnClickListener(v -> {
-                chosenIcon = icon;
-                for (int i = 0; i < iconRow.getChildCount(); i++) {
-                    iconRow.getChildAt(i).setAlpha(iconRow.getChildAt(i) == chip ? 1f : .36f);
-                }
-            });
-        }
-        form.addView(iconRow);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(current == null ? "Novo hábito" : "Editar hábito")
-                .setView(form)
-                .setPositiveButton("Salvar", null)
-                .setNegativeButton("Cancelar", null)
-                .create();
-        if (current != null) dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "Excluir", (d, which) -> {});
-        dialog.setOnShowListener(v -> {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b -> {
-                String value = name.getText().toString().trim();
-                if (value.isEmpty()) {
-                    name.setError("Informe o nome do hábito");
-                    return;
-                }
-                HabitStore.save(this, current == null ? "" : current.id, value, chosenColor, chosenIcon);
-                LoopDotsWidgetProvider.refreshAll(this);
-                renderList();
-                dialog.dismiss();
-            });
-            if (current != null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(b ->
-                    new AlertDialog.Builder(this)
-                            .setTitle("Excluir " + current.name + "?")
-                            .setMessage("Os registros deste hábito serão apagados.")
-                            .setPositiveButton("Excluir", (confirm, which) -> {
-                                HabitStore.delete(this, current.id);
-                                LoopDotsWidgetProvider.refreshAll(this);
-                                renderList(); dialog.dismiss();
-                            })
-                            .setNegativeButton("Cancelar", null).show());
-        });
-        dialog.show();
-    }
+    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result!=RESULT_OK||data==null||data.getData()==null)return;try{if(request==101){try(OutputStream out=getContentResolver().openOutputStream(data.getData())){if(out==null)throw new IOException();out.write(DataStore.load(this).toString(2).getBytes(StandardCharsets.UTF_8));}toast("Backup salvo");}else if(request==102){String raw;try(InputStream in=getContentResolver().openInputStream(data.getData());ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buf=new byte[8192];int n,total=0;while((n=in.read(buf))!=-1){total+=n;if(total>10_000_000)throw new IOException("Arquivo muito grande");out.write(buf,0,n);}raw=out.toString("UTF-8");}call("onImport("+JSONObject.quote(raw)+")");}}catch(Exception e){toast("Não foi possível ler ou gravar o backup.");}}
 }
