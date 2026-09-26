@@ -36,3 +36,8 @@ body{position:relative}
 #nav button{transition:color 180ms ease}
 body.overlay-open #app{overflow-y:hidden}
 .sheet-footer{bottom:0;padding:12px 0 5px}
+
+/* Popup backdrop modes are set before the first frame; no dark-to-light flash. */
+.scrim{transition:none}.scrim.page-scrim{background:transparent}
+button:active:not(:disabled){opacity:1}
+.menu button:active,.setting:active{transform:none;background:color-mix(in srgb,var(--text) 4%,transparent)}

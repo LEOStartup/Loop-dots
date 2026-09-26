@@ -90,6 +90,23 @@ const { chromium } = require('playwright');
     assert.ok(fade.samples[1]>0&&fade.samples[1]<.15);assert.ok(fade.samples[2]>.25&&fade.samples[2]<.4);
     assert.ok(fade.samples.every((n,i,a)=>i===0||n>=a[i-1]));
     assert.equal(fade.unchangedHeader,true);assert.equal(fade.unchangedNav,true);assert.equal(fade.transform,'none');assert.equal(fade.sameAnimation,true);assert.equal(fade.copies,0);
+    const popup=await page.evaluate(async()=>{
+      closeSheet(true);openMenu('test',120,130);const menu=document.querySelector('.menu'),scrim=document.querySelector('.scrim');
+      const shade=getComputedStyle(scrim).backgroundColor;openMenu('test',125,135);
+      const retained=menu===document.querySelector('.menu');
+      await new Promise(r=>setTimeout(r,250));closeSheet();
+      const surfaceAnimation=menu.getAnimations()[0];surfaceAnimation.pause();
+      const shadeAnimation=scrim.getAnimations()[0];shadeAnimation.pause();
+      shadeAnimation.currentTime=220;const before=Number(getComputedStyle(scrim).opacity);
+      shadeAnimation.currentTime=240;const after=Number(getComputedStyle(scrim).opacity);
+      const exists=!!document.querySelector('.menu');closeSheet(true);
+      navigate('settings');setting('general');const pageShade=getComputedStyle(document.querySelector('.scrim')).backgroundColor;
+      const sideways=document.querySelector('.sheet').getAnimations()[0].effect.getKeyframes().some(f=>f.transform&&f.transform!=='none');
+      closeSheet(true);return {shade,retained,before,after,exists,pageShade,sideways};
+    });
+    assert.equal(popup.shade,'rgba(0, 0, 0, 0.133)');assert.equal(popup.retained,true);
+    assert.ok(popup.before<.05);assert.equal(popup.after,0);assert.equal(popup.exists,true);
+    assert.equal(popup.pageShade,'rgba(0, 0, 0, 0)');assert.equal(popup.sideways,false);
     // Record the bar DURING transitions, not just after they have settled.
     const navGeometry = await page.evaluate(async()=>{
       const nav=document.querySelector('#nav'),main=document.querySelector('#app');
