@@ -10,8 +10,17 @@ import android.widget.*;
 import org.json.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
+    // Widget bitmap generation must not occupy the UI thread during a touch animation.
+    private static final ScheduledExecutorService widgetUpdates=Executors.newSingleThreadScheduledExecutor();
+    private static ScheduledFuture<?> pendingWidgets;
+    private static synchronized void refreshWidgets(Context context){
+        Context app=context.getApplicationContext();
+        if(pendingWidgets!=null)pendingWidgets.cancel(false);
+        pendingWidgets=widgetUpdates.schedule(()->{LoopDotsWidgetProvider.refreshAll(app);ReminderReceiver.schedule(app);},120,TimeUnit.MILLISECONDS);
+    }
     private WebView web; private boolean loaded=false; private String initial="";
     @Override public void onCreate(Bundle b){super.onCreate(b);initial=getIntent().getStringExtra("habit");if(initial==null)initial="";
         if(Build.VERSION.SDK_INT>=30)getWindow().setDecorFitsSystemWindows(false);else getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
@@ -32,7 +41,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String load(){return DataStore.load(MainActivity.this).toString();}
         @JavascriptInterface public String initialHabit(){return initial;}
         @JavascriptInterface public void overlay(boolean open){}
-        @JavascriptInterface public void save(String raw){try{DataStore.save(MainActivity.this,raw);runOnUiThread(()->{LoopDotsWidgetProvider.refreshAll(MainActivity.this);ReminderReceiver.schedule(MainActivity.this);});}catch(Exception e){toast("Falha ao salvar: "+e.getMessage());}}
+        @JavascriptInterface public void save(String raw){try{DataStore.save(MainActivity.this,raw);refreshWidgets(MainActivity.this);}catch(Exception e){toast("Falha ao salvar: "+e.getMessage());}}
         @JavascriptInterface public void haptic(){runOnUiThread(()->web.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP));}
         @JavascriptInterface public void notifications(){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},30);});}
         @JavascriptInterface public void openUrl(String url){if(!url.startsWith("https://github.com/LEOStartup/Loop-dots"))return;runOnUiThread(()->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){toast("Nenhum navegador disponível");}});}

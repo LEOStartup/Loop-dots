@@ -1,0 +1,8 @@
+{
+  "name": "loopdots-ui-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/core.test.cjs && node tests/motion.test.cjs"
+  },
+  "devDependencies": { "playwright": "1.62.1" }
+}

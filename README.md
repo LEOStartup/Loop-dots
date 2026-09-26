@@ -2,11 +2,20 @@
 
 Android habit tracker with month, week and history views, local statistics and five resizable home-screen widgets.
 
-## Install v1.0.5
+## Install v1.0.6
 
-**[Download LoopDots-v1.0.5.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.5/LoopDots-v1.0.5.apk)**
+**[Download LoopDots-v1.0.6.apk](https://github.com/LEOStartup/Loop-dots/releases/download/v1.0.6/LoopDots-v1.0.6.apk)**
 
-Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 21.
+Install over the previous signed release. Do not uninstall if you want to keep your existing data. The application ID (`com.leostartup.loopdots.v2`) and persistent signing key are unchanged. Version code: 22.
+
+## v1.0.6 interaction update
+
+- Live controls are updated in place: marking days, choosing colors/categories and toggling settings no longer replays a sheet opening animation.
+- Animated opening and dismissal, subtle tab transitions, fixed six-week calendar with horizontal month transitions, and full-height settings subpages.
+- Editing retains focus, caret, expanded options and scroll position; returning from the emoji/category picker restores the form.
+- Repeated navigation cancels obsolete animations. Reduced motion is respected.
+- Native widget rendering runs off the UI thread; saved data remains synchronous.
+- Browser regression checks cover stable calendar frames, retained controls, close/reopen races and rapid taps. Physical Samsung/DeX validation remains device-side.
 
 ## Features
 
@@ -33,7 +42,9 @@ The first launch reads the previous `habits_v2` list and `done_v2_<id>` date set
 Java 17, Gradle 8.7, Android SDK 35.
 
 ```sh
-node --test tests/core.test.cjs
+npm ci
+npx playwright install chromium
+npm test
 gradle test lint assembleRelease
 ```
 

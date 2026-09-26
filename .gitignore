@@ -3,3 +3,6 @@
 local.properties
 *.jks
 *.keystore
+node_modules/
+playwright-report/
+test-results/
