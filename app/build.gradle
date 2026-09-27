@@ -19,8 +19,8 @@ android {
         applicationId 'com.leostartup.loopdots.v2'
         minSdk 26
         targetSdk 35
-        versionCode 28
-        versionName '1.0.12'
+        versionCode 29
+        versionName '1.0.13'
     }
     buildTypes {
         release {
