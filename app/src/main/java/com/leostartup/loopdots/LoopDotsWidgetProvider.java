@@ -41,7 +41,11 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
     private static PendingIntent toggle(Context c,int id,String habit,String date){Intent i=new Intent(c,LoopDotsWidgetProvider.class).setAction(ACTION_TOGGLE).putExtra("widget",id).putExtra("habit",habit).putExtra("date",date).setData(Uri.parse("loopdots://day/"+id+"/"+habit+"/"+date));return PendingIntent.getBroadcast(c,0,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
     public static void updateWidget(Context c,AppWidgetManager m,int id){
         RemoteViews v=new RemoteViews(c.getPackageName(),R.layout.widget);int type=kind(c,id),bg=WidgetConfigActivity.background(c,id);int fg=bg==3?Color.BLACK:Color.WHITE;
-        v.setImageViewBitmap(R.id.glass_background,background(bg,WidgetConfigActivity.opacity(c,id)));
+        int alpha=Math.max(1,Math.min(254,Math.round(WidgetConfigActivity.opacity(c,id)*2.55f)));
+        boolean nativeGlass=bg==1&&android.os.Build.VERSION.SDK_INT>=31;
+        v.setInt(android.R.id.background,"setBackgroundColor",nativeGlass?Color.argb(alpha,25,25,28):Color.TRANSPARENT);
+        v.setViewVisibility(R.id.glass_background,nativeGlass?View.GONE:View.VISIBLE);
+        if(!nativeGlass)v.setImageViewBitmap(R.id.glass_background,background(bg,WidgetConfigActivity.opacity(c,id)));
         v.setOnClickPendingIntent(R.id.configure,open(c,id,"",true));v.setOnClickPendingIntent(R.id.empty_hint,open(c,id,"",true));
         List<JSONObject> hs=new ArrayList<>();for(String hid:WidgetConfigActivity.habitIds(c,id)){JSONObject h=DataStore.habit(c,hid);if(h!=null&&!h.optBoolean("archived"))hs.add(h);}
         v.setViewVisibility(R.id.widget_rows,View.GONE);v.setViewVisibility(R.id.grid_bitmap,View.GONE);
@@ -62,6 +66,7 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
                 compactHeader=Math.max(14f,Math.min(20f,usable-compactRow*count));
                 if(android.os.Build.VERSION.SDK_INT>=31){
                     float contentHeight=56f+compactHeader+compactRow*count;
+                    v.setViewLayoutHeight(android.R.id.background,contentHeight,android.util.TypedValue.COMPLEX_UNIT_DIP);
                     v.setViewLayoutHeight(R.id.glass_background,contentHeight,android.util.TypedValue.COMPLEX_UNIT_DIP);
                     v.setViewLayoutHeight(R.id.widget_content,contentHeight,android.util.TypedValue.COMPLEX_UNIT_DIP);
                 }
