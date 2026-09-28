@@ -58,8 +58,13 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
             if(type==1){
                 float[] dimensions=compactSize(c,m,id);float usable=Math.max(42f,dimensions[1]-52f);
                 compactLimit=Math.max(1,(int)((usable-14f)/14f));int count=Math.min(hs.size(),compactLimit);
-                compactRow=Math.max(14f,Math.min(38f,Math.min((usable-16f)/count,(dimensions[0]-48f)/7f+6f)));
-                compactHeader=Math.max(14f,Math.min(22f,usable-compactRow*count));
+                compactRow=Math.max(14f,Math.min(28f,Math.min((usable-16f)/count,(dimensions[0]-48f)/7f+6f)));
+                compactHeader=Math.max(14f,Math.min(20f,usable-compactRow*count));
+                if(android.os.Build.VERSION.SDK_INT>=31){
+                    float contentHeight=56f+compactHeader+compactRow*count;
+                    v.setViewLayoutHeight(R.id.glass_background,contentHeight,android.util.TypedValue.COMPLEX_UNIT_DIP);
+                    v.setViewLayoutHeight(R.id.widget_content,contentHeight,android.util.TypedValue.COMPLEX_UNIT_DIP);
+                }
                 compactDayText=Math.max(8f,Math.min(12f,(dimensions[0]-44f)/7f*.6f));
             }
             if(type==1){RemoteViews header=new RemoteViews(c.getPackageName(),R.layout.widget_compact_header);
