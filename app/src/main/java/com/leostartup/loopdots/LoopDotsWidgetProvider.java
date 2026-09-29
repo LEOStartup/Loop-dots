@@ -56,7 +56,7 @@ public class LoopDotsWidgetProvider extends AppWidgetProvider {
         v.setTextViewText(R.id.total_count,"🔥"+DataStore.streak(h));v.setOnClickPendingIntent(R.id.habit_title,open(c,id,hid,false));v.setOnClickPendingIntent(R.id.habit_icon,open(c,id,hid,false));v.setOnClickPendingIntent(R.id.check_today,toggle(c,id,hid,DataStore.today()));
         v.setViewVisibility(R.id.check_today,type==0||type==1?View.GONE:View.VISIBLE);
         Calendar now=Calendar.getInstance();String month=new java.text.SimpleDateFormat("MMM yyyy",new Locale("pt","BR")).format(now.getTime());
-        v.setTextViewText(R.id.month_label,type==0?month:type==1?"":!h.optString("nextAction","").isEmpty()?"Comece: "+h.optString("nextAction"):h.optString("description","").isEmpty()?DataStore.count(h)+" dias concluídos":h.optString("description"));v.setViewVisibility(R.id.month_label,type==1?View.GONE:View.VISIBLE);
+        v.setTextViewText(R.id.month_label,type==0?month:type==1?"":!h.optString("nextAction","").isEmpty()?"→ "+h.optString("nextAction"):h.optString("description","").isEmpty()?DataStore.count(h)+" dias concluídos":h.optString("description"));v.setViewVisibility(R.id.month_label,type==1?View.GONE:View.VISIBLE);
         if(type==0||type==1){v.setViewVisibility(R.id.widget_rows,View.VISIBLE);v.removeAllViews(R.id.widget_rows);
             float compactRow=18f,compactHeader=14f,compactDayText=10f;int compactLimit=1;
             if(type==1){
