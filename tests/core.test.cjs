@@ -6,3 +6,6 @@ test('partial quantities do not count as completed',()=>{let h=habit({'2026-09-2
 test('planned weekdays skip weekend for streak and rate',()=>{let h=habit({'2026-09-18':1,'2026-09-21':1},{schedule:[1,2,3,4,5],created:'2026-09-18'});assert.equal(C.streak(h,C.date('2026-09-21')).current,2);assert.equal(C.rate(h,C.date('2026-09-21')),100)});
 test('weekly streak bridges year boundary',()=>{let h=habit({'2025-12-28':1,'2025-12-30':1,'2026-01-06':1});assert.equal(C.periodStreak(h,'week',C.date('2026-01-07')).current,3)});
 test('import rejects duplicates and invalid values',()=>{assert.throws(()=>C.validate({habits:[habit({}),habit({})]}));assert.throws(()=>C.validate({habits:[habit({'2026-09-01':-1})]}))});
+
+test('starting a next action does not count as completion',()=>{let h=habit({}, {nextAction:'Abrir o livro',starts:{'2026-09-29':true}});let doc=C.validate({habits:[h]});assert.equal(doc.habits[0].nextAction,'Abrir o livro');assert.equal(C.done(doc.habits[0],'2026-09-29'),false);assert.equal(C.streak(doc.habits[0],C.date('2026-09-29')).total,0)});
+test('import discards malformed start dates and values',()=>{let h=habit({}, {starts:{'2026-09-29':true,'2026-02-30':true,'bad':true,'2026-09-28':false}});assert.deepEqual(C.validate({habits:[h]}).habits[0].starts,{'2026-09-29':true})});

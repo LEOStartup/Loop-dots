@@ -2,7 +2,7 @@ name: Build and release Loop Dots APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feat/next-action"]
   workflow_dispatch:
 
 jobs:
@@ -57,23 +57,31 @@ jobs:
         run: |
           gradle test lint assembleRelease || { cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt; exit 1; }
           test -s app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.17.apk
-          cp LoopDots-v1.0.17.apk LoopDots.apk
+          cp app/build/outputs/apk/release/app-release.apk LoopDots-v1.0.18.apk
+          cp LoopDots-v1.0.18.apk LoopDots.apk
 
       - name: Verify APK signature
         shell: bash
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.17.apk
-          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.17.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          "$APKSIGNER" verify --verbose --print-certs LoopDots-v1.0.18.apk
+          echo "APK_SHA256=$(sha256sum LoopDots-v1.0.18.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Keep installable test APK
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoopDots-v1.0.18-test
+          path: LoopDots-v1.0.18.apk
+          if-no-files-found: error
 
       - name: Publish direct APK via GitHub Releases
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.0.17 LoopDots-v1.0.17.apk LoopDots.apk \
-            --title "Loop Dots v1.0.17" \
-            --notes "Habilita o desfoque nativo do One UI para o fundo translúcido dos widgets. Mantém as demais opções de fundo e o tamanho compacto. Atualização com mesmo applicationId e chave permanente. Instale sobre a versão anterior para manter os dados. SHA256: $APK_SHA256." \
+          gh release create v1.0.18 LoopDots-v1.0.18.apk LoopDots.apk \
+            --title "Loop Dots v1.0.18" \
+            --notes "Adiciona próximo passo concreto por hábito, início separado da conclusão e ação visível nos widgets maiores. Mantém a chave permanente. Instale sobre a versão anterior para preservar os dados. SHA256: $APK_SHA256." \
             --latest

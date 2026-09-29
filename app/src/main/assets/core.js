@@ -33,6 +33,7 @@ function validate(s){
   if(!/^#[0-9a-f]{6}$/i.test(h.color||''))h.color='#ef4444';
   if(!h.entries||typeof h.entries!=='object'||Array.isArray(h.entries))h.entries={};
   for(let [k,v] of Object.entries(h.entries))if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||key(date(k))!==k||!Number.isFinite(Number(v))||v<0||v>999999)throw Error('Registro inválido');
+  h.nextAction=String(h.nextAction||'').slice(0,120);if(!h.starts||typeof h.starts!=='object'||Array.isArray(h.starts))h.starts={};for(const k of Object.keys(h.starts))if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||key(date(k))!==k||h.starts[k]!==true)delete h.starts[k];
   h.target=Math.max(1,Math.min(9999,Number(h.target)||1));h.description=String(h.description||'').slice(0,500);h.icon=String(h.icon||'✓').slice(0,30);
   h.schedule=Array.isArray(h.schedule)?h.schedule.filter(x=>Number.isInteger(x)&&x>=0&&x<=6):[];
   h.reminderDays=Array.isArray(h.reminderDays)?h.reminderDays.filter(x=>Number.isInteger(x)&&x>=0&&x<=6):[];
