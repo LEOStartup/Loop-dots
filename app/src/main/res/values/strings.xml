@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Loop Dots</string>
     <string name="widget_title">Hábito</string>
+    <string name="widget_preview_description">Exemplo de hábito e histórico no widget</string>
 </resources>

@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
         WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(false);s.setAllowFileAccess(false);s.setAllowContentAccess(false);s.setAllowFileAccessFromFileURLs(false);s.setAllowUniversalAccessFromFileURLs(false);s.setTextZoom(100);
         web.addJavascriptInterface(new Bridge(),"Android");web.setWebViewClient(new WebViewClient(){@Override public boolean shouldOverrideUrlLoading(WebView w,WebResourceRequest r){return !r.getUrl().toString().startsWith("file:///android_asset/");}@Override public void onPageFinished(WebView w,String u){loaded=true;}});
         web.loadUrl("file:///android_asset/index.html");ReminderReceiver.schedule(this);
+        widgetUpdates.execute(()->WidgetPreviews.publish(getApplicationContext()));
     }
     @Override protected void onResume(){super.onResume();if(web!=null&&loaded){web.evaluateJavascript("refreshFromNative()",null);ReminderReceiver.schedule(this);}}
     @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);String id=i.getStringExtra("habit");if(id!=null&&web!=null)web.evaluateJavascript("refreshFromNative();openHabit("+JSONObject.quote(id)+")",null);}
