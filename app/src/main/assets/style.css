@@ -41,3 +41,7 @@ body.overlay-open #app{overflow-y:hidden}
 .scrim{transition:none}.scrim.page-scrim{background:transparent}
 button:active:not(:disabled){opacity:1}
 .menu button:active,.setting:active{transform:none;background:color-mix(in srgb,var(--text) 4%,transparent)}
+
+/* Keep monthly empty days visible without implying completion. */
+.month-grid .dot:not(.done):not(.partial):not(.outside){background:color-mix(in srgb,var(--hc) 30%,var(--card))}
+.light .month-grid .dot:not(.done):not(.partial):not(.outside){background:color-mix(in srgb,var(--hc) 22%,var(--card))}

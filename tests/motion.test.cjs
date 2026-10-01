@@ -16,6 +16,22 @@ const { chromium } = require('playwright');
       state.habits=[{id:'test',name:'Meditar',description:'',color:'#a855f7',icon:'🧘',entries:{},notes:{},target:1,created:todayKey(),categories:[],reminderDays:[],schedule:[],reminderTime:'12:00',showStreak:true}];
       persist();render();window.originalCard=document.querySelector('[data-card]');window.originalNav=document.querySelector('#nav button');
     });
+    // Empty monthly days remain visible; completion retains the exact habit color.
+    const monthlyColors=await page.evaluate(()=>{
+      state.settings.motion=false;appearance();
+      const dot=document.querySelector('.month-grid .dot.today');
+      const empty=getComputedStyle(dot).backgroundColor;
+      const entries=JSON.stringify(get('test').entries);
+      dot.classList.add('done');const completed=getComputedStyle(dot).backgroundColor;dot.classList.remove('done');
+      const probe=document.createElement('span');probe.style.backgroundColor='color-mix(in srgb,#a855f7 30%,#020202)';document.body.append(probe);
+      const expected=getComputedStyle(probe).backgroundColor;probe.remove();
+      state.settings.motion=true;appearance();
+      return {empty,completed,expected,unchanged:entries===JSON.stringify(get('test').entries)};
+    });
+    assert.equal(monthlyColors.empty,monthlyColors.expected);
+    assert.equal(monthlyColors.completed,'rgb(168, 85, 247)');
+    assert.equal(monthlyColors.unchanged,true);
+
     // Repeated marks update the live day/card. No card entrance or page animation.
     for(let i=0;i<5;i++) await page.evaluate(()=>mark('test'));
     assert.deepEqual(await page.evaluate(()=>({card:originalCard===document.querySelector('[data-card]'),nav:originalNav===document.querySelector('#nav button'),count:get('test').entries[todayKey()],cardAnimations:originalCard.getAnimations().length})),{card:true,nav:true,count:1,cardAnimations:0});
