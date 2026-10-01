@@ -1,1 +1,3 @@
-<ImageView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/cell_image" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:padding="2dp" android:scaleType="fitCenter" android:contentDescription="Dia"/>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/cell_touch" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="?android:attr/selectableItemBackground" android:contentDescription="Dia">
+<ImageView android:id="@+id/cell_image" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="2dp" android:scaleType="fitCenter" android:importantForAccessibility="no" android:contentDescription="@null"/>
+</FrameLayout>
